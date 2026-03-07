@@ -6,963 +6,158 @@
 <title>소부모 — 소중한 부모님의 소일거리</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700;900&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
+/* [기본 설정] */
 * { margin:0; padding:0; box-sizing:border-box; }
-
 :root {
   --bg: #FFFBF5;
-  --warm1: #FFF3E0;
-  --warm2: #FFE8C8;
   --orange: #E8732A;
-  --orange-soft: #F4956A;
   --orange-pale: #FDEEE4;
   --brown: #4A2E1A;
-  --brown-mid: #7A4E35;
-  --brown-soft: #B07D5E;
-  --green: #6B9E6B;
-  --green-pale: #EBF4EB;
-  --text: #3A2010;
   --text-mid: #7A5540;
-  --text-light: #B09080;
+  --warm1: #FFF3E0;
 }
-
 html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--brown); font-family: 'Noto Sans KR', sans-serif; line-height: 1.7; }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Noto Sans KR', sans-serif;
-  line-height: 1.7;
-}
-
-/* NAV */
-nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  z-index: 100;
-  padding: 20px 40px;
-  display: flex; align-items: center; justify-content: space-between;
-  background: rgba(255,251,245,0.92);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(232,115,42,0.08);
-}
-
-.nav-logo {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--orange);
-  text-decoration: none;
-}
-
+/* [네비게이션] */
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; background: rgba(255,251,245,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(232,115,42,0.08); }
+.nav-logo { font-family: 'Noto Serif KR', serif; font-size: 1.4rem; font-weight: 700; color: var(--orange); text-decoration: none; }
 .nav-logo span { color: var(--brown); }
-
 .nav-links { display: flex; gap: 32px; list-style: none; }
-.nav-links a {
-  text-decoration: none;
-  color: var(--text-mid);
-  font-size: 0.9rem;
-  font-weight: 400;
-  transition: color 0.2s;
-}
-.nav-links a:hover { color: var(--orange); }
-
-.nav-cta {
-  background: var(--orange);
-  color: white !important;
-  padding: 9px 22px;
-  border-radius: 100px;
-  font-weight: 500 !important;
-  transition: background 0.2s !important;
-}
-.nav-cta:hover { background: var(--brown-mid) !important; color: white !important; }
-
-/* HERO */
-.hero {
-  min-height: 100vh;
-  padding: 140px 40px 80px;
-  display: flex;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-bg-circle {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.hero-bg-circle.c1 {
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(232,115,42,0.1) 0%, transparent 70%);
-  top: -100px; right: -100px;
-}
-.hero-bg-circle.c2 {
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(107,158,107,0.08) 0%, transparent 70%);
-  bottom: 0; left: -80px;
-}
-
-.hero-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
-  align-items: center;
-  position: relative; z-index: 1;
-}
-
-.hero-left { }
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--orange-pale);
-  border: 1px solid rgba(232,115,42,0.2);
-  border-radius: 100px;
-  padding: 7px 16px;
-  font-size: 0.8rem;
-  color: var(--orange);
-  margin-bottom: 28px;
-  opacity: 0;
-  animation: fadeUp 0.7s ease 0.1s forwards;
-}
-
-.hero-badge-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--orange);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-.hero-title {
-  font-family: 'Noto Serif KR', serif;
-  font-size: clamp(2.4rem, 5vw, 3.8rem);
-  font-weight: 900;
-  line-height: 1.25;
-  color: var(--brown);
-  margin-bottom: 24px;
-  opacity: 0;
-  animation: fadeUp 0.7s ease 0.25s forwards;
-}
-
-.hero-title .highlight {
-  color: var(--orange);
-  position: relative;
-}
-
-.hero-title .highlight::after {
-  content: '';
-  position: absolute;
-  bottom: 2px; left: 0; right: 0;
-  height: 3px;
-  background: var(--orange-soft);
-  border-radius: 2px;
-  opacity: 0.5;
-}
-
-.hero-desc {
-  font-size: 1.05rem;
-  color: var(--text-mid);
-  font-weight: 300;
-  margin-bottom: 40px;
-  line-height: 1.9;
-  opacity: 0;
-  animation: fadeUp 0.7s ease 0.4s forwards;
-}
-
-.hero-btns {
-  display: flex; gap: 16px; flex-wrap: wrap;
-  opacity: 0;
-  animation: fadeUp 0.7s ease 0.55s forwards;
-}
-
-.btn-primary {
-  background: var(--orange);
-  color: white;
-  padding: 14px 32px;
-  border-radius: 100px;
-  text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: all 0.25s;
-  box-shadow: 0 4px 20px rgba(232,115,42,0.3);
-}
-.btn-primary:hover {
-  background: var(--brown-mid);
-  box-shadow: 0 6px 28px rgba(74,46,26,0.25);
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--brown-mid);
-  padding: 14px 32px;
-  border-radius: 100px;
-  text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 400;
-  border: 1.5px solid rgba(122,78,53,0.25);
-  transition: all 0.25s;
-}
-.btn-secondary:hover {
-  border-color: var(--orange);
-  color: var(--orange);
-}
-
-.hero-right {
-  opacity: 0;
-  animation: fadeUp 0.8s ease 0.3s forwards;
-}
-
-.hero-card-stack {
-  position: relative;
-  height: 420px;
-}
-
-.hero-card {
-  position: absolute;
-  background: white;
-  border-radius: 24px;
-  padding: 28px 32px;
-  box-shadow: 0 8px 40px rgba(74,46,26,0.1);
-  border: 1px solid rgba(232,115,42,0.08);
-}
-
-.hero-card.card1 {
-  width: 280px;
-  top: 0; right: 0;
-  animation: float1 4s ease-in-out infinite;
-}
-
-.hero-card.card2 {
-  width: 240px;
-  top: 160px; left: 0;
-  animation: float2 4.5s ease-in-out infinite;
-}
-
-.hero-card.card3 {
-  width: 220px;
-  bottom: 0; right: 40px;
-  animation: float1 5s ease-in-out infinite reverse;
-}
-
-@keyframes float1 {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-@keyframes float2 {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.card-icon { font-size: 2rem; margin-bottom: 12px; }
-.card-title {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--brown);
-  margin-bottom: 6px;
-}
-.card-desc { font-size: 0.82rem; color: var(--text-light); line-height: 1.6; }
-.card-tag {
-  display: inline-block;
-  margin-top: 12px;
-  background: var(--orange-pale);
-  color: var(--orange);
-  font-size: 0.75rem;
-  padding: 4px 12px;
-  border-radius: 100px;
-}
-
-/* SERVICES */
-.services {
-  padding: 100px 40px;
-  background: var(--warm1);
-}
-
-.services-inner { max-width: 1100px; margin: 0 auto; }
-
-.section-eyebrow {
-  font-size: 0.78rem;
-  letter-spacing: 0.3em;
-  color: var(--orange);
-  text-transform: uppercase;
-  margin-bottom: 12px;
-  font-weight: 500;
-}
-
-.section-title {
-  font-family: 'Noto Serif KR', serif;
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 700;
-  color: var(--brown);
-  margin-bottom: 16px;
-  line-height: 1.35;
-}
-
-.section-desc {
-  font-size: 1rem;
-  color: var(--text-mid);
-  font-weight: 300;
-  margin-bottom: 56px;
-  max-width: 520px;
-}
-
-.services-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.service-card {
-  background: white;
-  border-radius: 20px;
-  padding: 36px 28px;
-  border: 1px solid rgba(232,115,42,0.08);
-  transition: all 0.3s ease;
-  cursor: default;
-}
-
-.service-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 48px rgba(74,46,26,0.1);
-  border-color: rgba(232,115,42,0.2);
-}
-
-.service-icon { font-size: 2.4rem; margin-bottom: 20px; }
-
-.service-name {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--brown);
-  margin-bottom: 12px;
-}
-
-.service-items {
-  list-style: none;
-  display: flex; flex-direction: column; gap: 8px;
-}
-
-.service-items li {
-  font-size: 0.88rem;
-  color: var(--text-mid);
-  display: flex; align-items: center; gap: 10px;
-}
-
-.service-items li::before {
-  content: '';
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--orange-soft);
-  flex-shrink: 0;
-}
-
-/* HOW */
-.how {
-  padding: 100px 40px;
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 32px;
-  margin-top: 56px;
-  position: relative;
-}
-
-.steps::before {
-  content: '';
-  position: absolute;
-  top: 36px; left: 10%; right: 10%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--orange-soft), transparent);
-  opacity: 0.4;
-}
-
-.step { text-align: center; position: relative; }
-
-.step-num {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: var(--orange-pale);
-  border: 2px solid rgba(232,115,42,0.2);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px;
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--orange);
-  transition: all 0.3s;
-}
-
-.step:hover .step-num {
-  background: var(--orange);
-  color: white;
-  transform: scale(1.08);
-}
-
-.step-title {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--brown);
-  margin-bottom: 8px;
-}
-
-.step-desc {
-  font-size: 0.85rem;
-  color: var(--text-mid);
-  line-height: 1.7;
-}
-
-/* JOIN - 어르신 모집 */
-.join {
-  padding: 100px 40px;
-  background: linear-gradient(135deg, var(--brown) 0%, #6B3E25 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.join::before {
-  content: '';
-  position: absolute;
-  width: 500px; height: 500px;
-  border-radius: 50%;
-  background: rgba(232,115,42,0.15);
-  top: -200px; right: -100px;
-}
-
-.join::after {
-  content: '';
-  position: absolute;
-  width: 300px; height: 300px;
-  border-radius: 50%;
-  background: rgba(107,158,107,0.1);
-  bottom: -100px; left: 100px;
-}
-
-.join-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 80px;
-  align-items: center;
-  position: relative; z-index: 1;
-}
-
-.join .section-eyebrow { color: var(--orange-soft); }
-.join .section-title { color: white; }
-.join .section-desc { color: rgba(255,255,255,0.65); }
-
-.join-benefits {
-  display: flex; flex-direction: column; gap: 16px;
-  margin-top: 32px;
-}
-
-.benefit-row {
-  display: flex; align-items: center; gap: 16px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px;
-  padding: 18px 22px;
-  transition: background 0.2s;
-}
-
-.benefit-row:hover { background: rgba(255,255,255,0.1); }
-.benefit-icon { font-size: 1.6rem; flex-shrink: 0; }
-.benefit-text { font-size: 0.9rem; color: rgba(255,255,255,0.85); line-height: 1.6; }
-.benefit-text strong { color: white; }
-
-.join-form-box {
-  background: white;
-  border-radius: 28px;
-  padding: 48px 40px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.2);
-}
-
-.form-title {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--brown);
-  margin-bottom: 8px;
-}
-
-.form-subtitle {
-  font-size: 0.85rem;
-  color: var(--text-light);
-  margin-bottom: 32px;
-}
-
-.form-tabs {
-  display: flex; gap: 0;
-  background: var(--warm1);
-  border-radius: 12px;
-  padding: 4px;
-  margin-bottom: 28px;
-}
-
-.form-tab {
-  flex: 1;
-  text-align: center;
-  padding: 10px;
-  border-radius: 9px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  color: var(--text-mid);
-  transition: all 0.2s;
-  font-weight: 400;
-  border: none;
-  background: transparent;
-}
-
-.form-tab.active {
-  background: white;
-  color: var(--orange);
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.form-group { margin-bottom: 18px; }
-
-.form-label {
-  display: block;
-  font-size: 0.82rem;
-  color: var(--text-mid);
-  margin-bottom: 7px;
-  font-weight: 500;
-}
-
-.form-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1.5px solid rgba(122,78,53,0.15);
-  border-radius: 12px;
-  font-family: 'Noto Sans KR', sans-serif;
-  font-size: 0.9rem;
-  color: var(--text);
-  background: var(--bg);
-  transition: border-color 0.2s;
-  outline: none;
-}
-
-.form-input:focus { border-color: var(--orange); }
-
-.form-submit {
-  width: 100%;
-  padding: 14px;
-  background: var(--orange);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-family: 'Noto Sans KR', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.25s;
-  margin-top: 8px;
-}
-
-.form-submit:hover {
-  background: var(--brown-mid);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(232,115,42,0.3);
-}
-
-/* CONTACT */
-.contact {
-  padding: 80px 40px;
-  background: var(--warm1);
-}
-
-.contact-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
-  flex-wrap: wrap;
-}
-
-.contact-text .section-title { margin-bottom: 8px; }
-.contact-text p { font-size: 0.95rem; color: var(--text-mid); font-weight: 300; }
-
-.contact-info {
-  display: flex; flex-direction: column; gap: 16px;
-}
-
-.contact-row {
-  display: flex; align-items: center; gap: 14px;
-}
-
-.contact-row-icon {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  background: var(--orange-pale);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.contact-row-label { font-size: 0.78rem; color: var(--text-light); }
-.contact-row-val { font-size: 0.95rem; color: var(--brown); font-weight: 500; }
-
-/* FOOTER */
-footer {
-  padding: 48px 40px;
-  background: var(--brown);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.footer-logo {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: white;
-}
-
-.footer-logo span { color: var(--orange-soft); }
-
-.footer-tagline {
-  font-size: 0.82rem;
-  color: rgba(255,255,255,0.4);
-  margin-top: 4px;
-}
-
-.footer-right {
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.3);
-  text-align: right;
-}
-
-/* ANIMATIONS */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.65s ease, transform 0.65s ease;
-}
+.nav-links a { text-decoration: none; color: var(--text-mid); font-size: 0.9rem; font-weight: 400; }
+.nav-cta { background: var(--orange); color: white !important; padding: 9px 22px; border-radius: 100px; font-weight: 500 !important; }
+
+/* [히어로 섹션] */
+.hero { min-height: 100vh; padding: 140px 40px 80px; display: flex; align-items: center; position: relative; overflow: hidden; }
+.hero-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; position: relative; z-index: 1; }
+.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--orange-pale); border: 1px solid rgba(232,115,42,0.2); border-radius: 100px; padding: 7px 16px; font-size: 0.8rem; color: var(--orange); margin-bottom: 28px; }
+.hero-title { font-family: 'Noto Serif KR', serif; font-size: clamp(2.4rem, 5vw, 3.8rem); font-weight: 900; line-height: 1.25; margin-bottom: 24px; }
+.hero-title .highlight { color: var(--orange); position: relative; }
+.hero-desc { font-size: 1.05rem; color: var(--text-mid); margin-bottom: 40px; }
+
+/* [대표 스토리 섹션] */
+.story-section { padding: 120px 20px; background: #fff; }
+.story-container { max-width: 800px; margin: 0 auto; text-align: center; }
+.story-label { display: inline-block; padding: 6px 15px; background: var(--orange-pale); color: var(--orange); border-radius: 5px; font-size: 0.8rem; font-weight: 700; margin-bottom: 30px; }
+.story-quote { font-family: 'Noto Serif KR', serif; font-size: 1.8rem; color: var(--brown); line-height: 1.5; font-weight: 700; margin-bottom: 40px; }
+.story-text { font-size: 1.05rem; line-height: 1.9; color: var(--text-mid); text-align: justify; text-align-last: center; margin-bottom: 50px; }
+.story-highlight { color: var(--orange); font-weight: 700; border-bottom: 2px solid var(--orange-pale); }
+
+/* [사회적 가치 카드] */
+.value-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 1100px; margin: 50px auto; padding: 0 20px; }
+.value-item { padding: 30px; border-radius: 20px; background: var(--warm1); text-align: center; }
+.value-icon { font-size: 2.5rem; margin-bottom: 15px; display: block; }
+
+/* [안내 문구 - 지하철/콜 부재] */
+.notice-box { background: #fdf6ed; padding: 40px 20px; border-top: 1px dashed var(--orange); border-bottom: 1px dashed var(--orange); text-align: center; margin: 60px 0; }
+.notice-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+
+/* [뉴스 섹션] */
+#news { padding: 100px 20px; text-align: center; }
+.news-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin: 40px auto; }
+.news-card { border: 1px solid #eee; padding: 25px; border-radius: 20px; background: white; cursor: pointer; text-align: left; transition: 0.3s; }
+.news-card:hover { transform: translateY(-5px); border-color: var(--orange); }
+
+/* [푸터] */
+footer { background: var(--brown); padding: 60px 40px; color: rgba(255,255,255,0.6); }
+
+/* [공통 애니메이션] */
+.reveal { opacity: 0; transform: translateY(30px); transition: 0.8s ease; }
 .reveal.visible { opacity: 1; transform: translateY(0); }
-
-/* RESPONSIVE */
-@media (max-width: 900px) {
-  .hero-inner { grid-template-columns: 1fr; }
-  .hero-right { display: none; }
-  .services-grid { grid-template-columns: 1fr 1fr; }
-  .steps { grid-template-columns: 1fr 1fr; }
-  .steps::before { display: none; }
-  .join-inner { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
-}
-
-@media (max-width: 560px) {
-  .services-grid { grid-template-columns: 1fr; }
-  nav { padding: 16px 20px; }
-  .hero { padding: 120px 20px 60px; }
-  .services, .how, .join, .contact { padding: 70px 20px; }
-}
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
   <a href="#" class="nav-logo">소부모<span>.com</span></a>
   <ul class="nav-links">
+    <li><a href="#story">대표의 진심</a></li>
     <li><a href="#services">서비스</a></li>
-    <li><a href="#how">이용방법</a></li>
-    <li><a href="#join">활동가 모집</a></li>
-    <li><a href="#contact" class="nav-cta">문의하기</a></li>
+    <li><a href="#news">뉴스</a></li>
+    <li><a href="#join">참여하기</a></li>
+    <li><a href="tel:053-721-8578" class="nav-cta">053-721-8578</a></li>
   </ul>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
-  <div class="hero-bg-circle c1"></div>
-  <div class="hero-bg-circle c2"></div>
   <div class="hero-inner">
     <div class="hero-left">
-      <div class="hero-badge">
-        <div class="hero-badge-dot"></div>
-        대구 지역 서비스 준비 중
-      </div>
-      <h1 class="hero-title">
-        어르신의 <span class="highlight">소일거리</span>가<br>
-        이웃의 든든한<br>
-        생활 서비스가 됩니다
-      </h1>
-      <p class="hero-desc">
-        소부모는 건강한 어르신 활동가가<br>
-        지역 병원·약국·가정의 가벼운 심부름을 대신합니다.<br>
-        단순한 복지가 아닌, 의미 있는 활동형 일자리입니다.
-      </p>
-      <div class="hero-btns">
-        <a href="#join" class="btn-primary">활동가로 참여하기</a>
-        <a href="#services" class="btn-secondary">서비스 알아보기</a>
-      </div>
+      <div class="hero-badge">대구 지역 사회적 기업 프로젝트</div>
+      <h1 class="hero-title">부모님의 <span class="highlight">걸음</span>이<br>이웃의 <span class="highlight">기쁨</span>이 되는 곳</h1>
+      <p class="hero-desc">소중한 부모님, 소일거리 부모님, 소통하는 부모님.<br>대구 어르신들의 건강한 활력을 응원합니다.</p>
+      <a href="#join" style="background:var(--orange); color:white; padding:15px 35px; border-radius:100px; text-decoration:none; font-weight:700;">활동가 신청하기</a>
     </div>
-    <div class="hero-right">
-      <div class="hero-card-stack">
-        <div class="hero-card card1">
-          <div class="card-icon">🏥</div>
-          <div class="card-title">병원·약국 서류 전달</div>
-          <div class="card-desc">처방전, 진단서, 검사결과지 등 가볍고 중요한 서류를 안전하게</div>
-          <span class="card-tag">병원 서비스</span>
-        </div>
-        <div class="hero-card card2">
-          <div class="card-icon">👴</div>
-          <div class="card-title">어르신 활동가</div>
-          <div class="card-desc">65~80세 · 하루 1~3시간<br>소일거리 용돈 수입</div>
-          <span class="card-tag">활동가 모집 중</span>
-        </div>
-        <div class="hero-card card3">
-          <div class="card-icon">📦</div>
-          <div class="card-title">생활 심부름</div>
-          <div class="card-desc">약국 심부름, 관공서 서류, 작은 물건 배송</div>
-          <span class="card-tag">생활 서비스</span>
-        </div>
-      </div>
-    </div>
+    <div class="hero-right" style="font-size: 10rem; text-align: center;">👴🏃‍♂️🏥</div>
   </div>
 </section>
 
-<!-- SERVICES -->
-<section class="services reveal" id="services">
-  <div class="services-inner">
-    <p class="section-eyebrow">서비스</p>
-    <h2 class="section-title">가볍고 안전한 활동만<br>무거운 배송은 하지 않습니다</h2>
-    <p class="section-desc">어르신 활동가의 건강을 최우선으로 합니다. 걸어서 혹은 대중교통으로 가능한 범위 내의 서비스만 제공합니다.</p>
-    <div class="services-grid">
-      <div class="service-card">
-        <div class="service-icon">🏥</div>
-        <div class="service-name">병원 관련 서비스</div>
-        <ul class="service-items">
-          <li>병원 간 서류 전달</li>
-          <li>처방전·진단서 전달</li>
-          <li>약 전달</li>
-          <li>원내 간단 심부름</li>
-        </ul>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">🏃</div>
-        <div class="service-name">생활 심부름 서비스</div>
-        <ul class="service-items">
-          <li>약국 심부름</li>
-          <li>관공서 서류 전달·수령</li>
-          <li>작은 물건 배송</li>
-          <li>서류 전달</li>
-        </ul>
-      </div>
-      <div class="service-card">
-        <div class="service-icon">📋</div>
-        <div class="service-name">이런 서비스는 제외</div>
-        <ul class="service-items">
-          <li>무거운 물건 배송</li>
-          <li>장거리 이동 심부름</li>
-          <li>신체 보조 서비스</li>
-          <li>음식 배달</li>
-        </ul>
-      </div>
+<section class="story-section reveal" id="story">
+    <div class="story-container">
+        <span class="story-label">CEO MESSAGE</span>
+        <h3 class="story-quote">"새벽같이 운동을 나가시는 <br>부모님의 뒷모습이 소부모의 시작이었습니다."</h3>
+        <p class="story-text">
+            여러 사업체를 운영하며 바쁘게 살아오면서도, 제 시선은 늘 <span class="story-highlight">틈만 나면 운동하러 일찍 집을 나서시는 부모님</span>께 머물러 있었습니다. <br><br>
+            "가만히 있으면 병난다"며 활기차게 동네를 걸으시는 그 소중한 걸음들이, 우리 지역 사회에 꼭 필요한 누군가의 손길과 연결된다면 얼마나 좋을까 오래전부터 고민해왔습니다. <br><br>
+            <strong>소부모</strong>는 그 고민 끝에 태어난 저의 진심입니다. 이익을 남기기보다 어르신들의 건강한 웃음과 지역의 발전을 최우선으로 생각하겠습니다.
+        </p>
+        <div style="font-weight: 700; color: var(--brown);">소부모 대표 김준호 올림</div>
     </div>
-  </div>
 </section>
 
-<!-- HOW -->
-<section class="how reveal" id="how">
-  <p class="section-eyebrow">이용방법</p>
-  <h2 class="section-title">간단하게 맡기세요</h2>
-  <p class="section-desc">전화 한 통으로 접수하면 근처 어르신 활동가가 배정됩니다.</p>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-title">전화 접수</div>
-      <div class="step-desc">소부모 콜센터에 심부름 내용을 말씀해주세요</div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-title">활동가 배정</div>
-      <div class="step-desc">근처 어르신 활동가를 바로 배정합니다</div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-title">심부름 수행</div>
-      <div class="step-desc">활동가가 직접 방문하여 안전하게 수행합니다</div>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div class="step-title">완료 확인</div>
-      <div class="step-desc">완료 후 카카오톡으로 결과를 알려드립니다</div>
-    </div>
-  </div>
-</section>
-
-<!-- JOIN -->
-<section class="join reveal" id="join">
-  <div class="join-inner">
-    <div class="join-left">
-      <p class="section-eyebrow">어르신 활동가 모집</p>
-      <h2 class="section-title">하루 1~3시간<br>가볍게 참여하세요</h2>
-      <p class="section-desc">영업도, 고객 응대도 없습니다. 지정된 심부름만 하시면 됩니다.</p>
-      <div class="join-benefits">
-        <div class="benefit-row">
-          <div class="benefit-icon">💰</div>
-          <div class="benefit-text"><strong>하루 1~2만원 활동비</strong><br>건당 4,000~5,000원 지급</div>
-        </div>
-        <div class="benefit-row">
-          <div class="benefit-icon">🚶</div>
-          <div class="benefit-text"><strong>무리 없는 가벼운 활동</strong><br>걸어서 할 수 있는 범위만</div>
-        </div>
-        <div class="benefit-row">
-          <div class="benefit-icon">📱</div>
-          <div class="benefit-text"><strong>카카오톡으로 간단 소통</strong><br>어려운 앱 없이 카톡으로만</div>
-        </div>
-        <div class="benefit-row">
-          <div class="benefit-icon">🤝</div>
-          <div class="benefit-text"><strong>지역사회 기여</strong><br>의미 있는 활동으로 자존감 향상</div>
-        </div>
-      </div>
-    </div>
-    <div class="join-right">
-      <div class="join-form-box">
-        <div class="form-title">참여 신청하기</div>
-        <div class="form-subtitle">서비스 이용 또는 활동가 신청</div>
-        <div class="form-tabs">
-          <button class="form-tab active" onclick="switchTab(this, 'senior')">어르신 활동가</button>
-          <button class="form-tab" onclick="switchTab(this, 'client')">서비스 이용</button>
-        </div>
-        <div id="senior-form">
-          <div class="form-group">
-            <label class="form-label">성함</label>
-            <input type="text" class="form-input" placeholder="홍길동">
-          </div>
-          <div class="form-group">
-            <label class="form-label">연락처</label>
-            <input type="tel" class="form-input" placeholder="010-0000-0000">
-          </div>
-          <div class="form-group">
-            <label class="form-label">거주 지역</label>
-            <input type="text" class="form-input" placeholder="대구 수성구">
-          </div>
-          <div class="form-group">
-            <label class="form-label">연령대</label>
-            <input type="text" class="form-input" placeholder="65세">
-          </div>
-          <button class="form-submit" onclick="handleSubmit()">신청하기</button>
-        </div>
-        <div id="client-form" style="display:none">
-          <div class="form-group">
-            <label class="form-label">기관/성함</label>
-            <input type="text" class="form-input" placeholder="○○병원 원무과">
-          </div>
-          <div class="form-group">
-            <label class="form-label">연락처</label>
-            <input type="tel" class="form-input" placeholder="010-0000-0000">
-          </div>
-          <div class="form-group">
-            <label class="form-label">주로 필요한 서비스</label>
-            <input type="text" class="form-input" placeholder="병원 간 서류 전달">
-          </div>
-          <button class="form-submit" onclick="handleSubmit()">문의하기</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CONTACT -->
-<section class="contact reveal" id="contact">
-  <div class="contact-inner">
-    <div class="contact-text">
-      <p class="section-eyebrow">문의</p>
-      <h2 class="section-title">궁금한 점이 있으신가요?</h2>
-      <p>전화 또는 카카오톡으로 편하게 연락주세요.</p>
-    </div>
-    <div class="contact-info">
-      <div class="contact-row">
-        <div class="contact-row-icon">📞</div>
+<div class="notice-box reveal">
+    <div class="notice-inner">
         <div>
-          <div class="contact-row-label">전화</div>
-          <div class="contact-row-val">053-000-0000</div>
+            <h4 style="color:var(--orange); margin-bottom:10px;">🚇 지하철 무료 혜택의 가치</h4>
+            <p style="font-size:0.9rem;">어르신의 복지 혜택이 지역을 돕는 동력이 됩니다. 교통비 부담 없이 가벼운 마음으로 걸어보세요.</p>
         </div>
-      </div>
-      <div class="contact-row">
-        <div class="contact-row-icon">💬</div>
         <div>
-          <div class="contact-row-label">카카오톡</div>
-          <div class="contact-row-val">@소부모</div>
+            <h4 style="color:var(--orange); margin-bottom:10px;">🍀 조급함 대신 여유를</h4>
+            <p style="font-size:0.9rem;">어떤 날은 콜이 하나도 없을 수 있습니다. 그럴 땐 건강을 위한 기분 좋은 산책의 시간으로 채워주세요.</p>
         </div>
-      </div>
-      <div class="contact-row">
-        <div class="contact-row-icon">🌐</div>
-        <div>
-          <div class="contact-row-label">웹사이트</div>
-          <div class="contact-row-val">sobumo.com</div>
-        </div>
-      </div>
-      <div class="contact-row">
-        <div class="contact-row-icon">📍</div>
-        <div>
-          <div class="contact-row-label">서비스 지역</div>
-          <div class="contact-row-val">대구 (순차 확대 예정)</div>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
+
+<section id="news" class="reveal">
+    <p style="letter-spacing:3px; font-weight:700; color:var(--orange);">REAL-TIME INFO</p>
+    <h2 style="font-family:'Noto Serif KR'; font-size:2rem; margin-top:10px;">소부모 실시간 브리핑</h2>
+    <div class="news-grid">
+        <div class="news-card" onclick="window.open('https://search.naver.com/search.naver?where=news&query=대구+노인일자리+복지')">
+            <span style="color:var(--orange); font-size:0.8rem; font-weight:700;">#대구복지</span>
+            <div style="font-weight:700; margin-top:10px;">대구시, 2026년 어르신 활동 지원 정책 대폭 확대</div>
+        </div>
+        <div class="news-card" onclick="window.open('https://search.naver.com/search.naver?where=news&query=실버+헬스케어+걷기+효과')">
+            <span style="color:var(--orange); font-size:0.8rem; font-weight:700;">#건강정보</span>
+            <div style="font-weight:700; margin-top:10px;">하루 30분 걷기가 노년기 뇌 건강에 미치는 놀라운 영향</div>
+        </div>
+        <div class="news-card" onclick="window.open('https://search.naver.com/search.naver?where=news&query=사회적기업+지역상생')">
+            <span style="color:var(--orange); font-size:0.8rem; font-weight:700;">#상생경영</span>
+            <div style="font-weight:700; margin-top:10px;">수익보다 가치, 대구의 미래를 바꾸는 사회적 기업들</div>
+        </div>
+    </div>
 </section>
 
-<!-- FOOTER -->
 <footer>
-  <div>
-    <div class="footer-logo">소부모<span>.com</span></div>
-    <div class="footer-tagline">소중한 부모님의 소일거리 · 지역의 생활 서비스</div>
-  </div>
-  <div class="footer-right">
-    © 2025 소부모<br>
-    대구광역시
-  </div>
+    <div style="max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 30px;">
+        <div>
+            <div class="nav-logo" style="color:white; margin-bottom:20px;">소부모<span>.com</span></div>
+            <p style="font-size:0.85rem; line-height:1.8;">
+                대표자: 김준호 | 사업장: 대구광역시 남구 현충로 60<br>
+                문의전화: 053-721-8578 | 이메일: contact@sobumo.com
+            </p>
+        </div>
+        <div style="text-align:right;">
+            <p style="font-size:0.85rem; margin-bottom:10px;">소중한 부모님의 소일거리, 소부모</p>
+            <p style="font-size:0.75rem; opacity:0.5;">© 2026 SOBUMO. All Rights Reserved.</p>
+        </div>
+    </div>
 </footer>
 
 <script>
-// Reveal on scroll
-const reveals = document.querySelectorAll('.reveal');
-const io = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
-  });
-}, { threshold: 0.1 });
-reveals.forEach(el => io.observe(el));
-
-// Tab switch
-function switchTab(btn, type) {
-  document.querySelectorAll('.form-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('senior-form').style.display = type === 'senior' ? 'block' : 'none';
-  document.getElementById('client-form').style.display = type === 'client' ? 'block' : 'none';
-}
-
-// Submit
-function handleSubmit() {
-  alert('신청해 주셔서 감사합니다!\n빠른 시일 내에 연락드리겠습니다. 😊');
-}
+    const reveals = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => io.observe(el));
 </script>
 </body>
 </html>
