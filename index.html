@@ -1,2 +1,417 @@
-<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SOBUMO</title></head>
-<body style="font-family:sans-serif;padding:40px;text-align:center"><h1>SOBUMO</h1><p>판례를 찾고, 논리를 만들다 · 준비 중</p></body></html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SOBUMO · 판례를 찾고, 논리를 만들다</title>
+<meta name="description" content="대법원 판례 · 헌법재판소 결정 · 법령 · 법령해석례 · 행정심판례 검색과 사건별 정리">
+<meta name="theme-color" content="#16233A">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2316233A'/><text x='32' y='45' font-family='Georgia,serif' font-size='38' font-weight='700' text-anchor='middle' fill='%23C9A66B'>S</text></svg>">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16233A; --ink2:#2A3B57; --gold:#B08D57; --gold2:#C9A66B;
+  --paper:#F6F3ED; --card:#FFFFFF; --line:rgba(22,35,58,.10);
+  --text:#1B1F27; --sub:#5B6270; --sub2:#8F95A1; --red:#B4412F; --green:#2E7D5B;
+  --r:18px; --shadow:0 10px 30px rgba(22,35,58,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--paper);color:var(--text);font-family:'Pretendard Variable',Pretendard,-apple-system,sans-serif;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 110px}
+.serif{font-family:'Noto Serif KR',Georgia,serif}
+
+/* header */
+.top{position:sticky;top:0;z-index:20;background:rgba(246,243,237,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{max-width:720px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--ink);display:grid;place-items:center;color:var(--gold2);font:800 21px/1 Georgia,serif;box-shadow:0 4px 12px rgba(22,35,58,.25)}
+.brand{font:800 1.15rem/1 'Noto Serif KR',Georgia,serif;letter-spacing:.06em;color:var(--ink)}
+.brand small{display:block;font:500 .62rem/1.3 'Pretendard Variable',sans-serif;letter-spacing:0;color:var(--sub2);margin-top:3px}
+.top .sp{flex:1}
+.lock-btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 11px;font-size:.74rem;font-weight:700;color:var(--ink);cursor:pointer}
+
+/* hero */
+.hero{margin:18px 0 14px;padding:26px 22px 22px;border-radius:24px;background:linear-gradient(145deg,#16233A 0%,#24385A 100%);color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.hero::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(201,166,107,.25);box-shadow:0 0 0 30px rgba(201,166,107,.05),0 0 0 60px rgba(201,166,107,.03)}
+.hero h1{font:800 1.55rem/1.35 'Noto Serif KR',Georgia,serif;letter-spacing:-.01em;position:relative}
+.hero h1 em{font-style:normal;color:var(--gold2)}
+.hero p{font-size:.8rem;color:rgba(255,255,255,.72);margin-top:8px;line-height:1.6;position:relative}
+.hero .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;position:relative}
+.hero .tags span{font-size:.68rem;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.88)}
+
+/* search */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:.8rem;font-weight:700;color:var(--sub);cursor:pointer}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.sbox{display:flex;background:#fff;border:1.5px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.sbox:focus-within{border-color:var(--gold)}
+.sbox input{flex:1;min-width:0;border:none;outline:none;padding:15px 16px;font-size:1rem;background:transparent}
+.sbox button{border:none;background:var(--ink);color:#fff;font-weight:800;padding:0 20px;cursor:pointer}
+.opts{display:flex;gap:14px;flex-wrap:wrap;margin:10px 2px 0;font-size:.78rem;color:var(--sub)}
+.opts label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.opts input{accent-color:var(--ink)}
+.hint{font-size:.74rem;color:var(--sub2);margin:12px 2px 0;line-height:1.7}
+.hint b{color:var(--ink);cursor:pointer;border-bottom:1px dashed var(--gold);font-weight:700}
+
+/* list */
+.meta-row{display:flex;justify-content:space-between;align-items:center;margin:20px 2px 6px;font-size:.78rem;color:var(--sub)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;margin-top:9px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.item:active{transform:scale(.99)}
+.item:hover{box-shadow:var(--shadow)}
+.item .k{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.7rem;font-weight:800}
+.chip{padding:3px 8px;border-radius:6px;background:rgba(22,35,58,.07);color:var(--ink)}
+.chip.g{background:rgba(176,141,87,.14);color:#7A5B2B}
+.item h3{font-size:.95rem;font-weight:700;line-height:1.5;margin-top:8px;color:var(--text)}
+.item .d{font-size:.74rem;color:var(--sub2);margin-top:6px}
+.more{display:block;width:100%;margin-top:12px;padding:13px;border-radius:14px;border:1px dashed rgba(22,35,58,.25);background:transparent;font-weight:800;color:var(--ink);cursor:pointer}
+.empty{text-align:center;color:var(--sub2);font-size:.85rem;padding:34px 10px;line-height:1.7}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:8px}.dots i{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:b 1s infinite}.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+
+/* sheet */
+.sheet-bg{position:fixed;inset:0;background:rgba(10,16,28,.45);z-index:50;display:none;align-items:flex-end;justify-content:center}
+.sheet-bg.on{display:flex}
+.sheet{width:100%;max-width:720px;max-height:94vh;overflow:auto;background:var(--paper);border-radius:24px 24px 0 0;padding:10px 18px 30px;animation:up .22s ease}
+@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+.handle{width:40px;height:4px;border-radius:4px;background:rgba(22,35,58,.2);margin:4px auto 12px}
+.dt-head .k{display:flex;gap:6px;flex-wrap:wrap;font-size:.7rem;font-weight:800}
+.dt-head h2{font:800 1.12rem/1.5 'Noto Serif KR',Georgia,serif;margin-top:10px;color:var(--ink)}
+.cite{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:.82rem;font-weight:700;color:var(--ink)}
+.acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:12px 0 4px}
+.acts button,.acts a{border:none;border-radius:12px;padding:11px 6px;font-size:.78rem;font-weight:800;cursor:pointer;text-align:center;text-decoration:none}
+.a1{background:var(--ink);color:#fff}.a2{background:var(--gold);color:#fff}.a3{background:#fff;border:1px solid var(--line)!important;color:var(--ink)}
+.sec{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 15px}
+.sec h4{font-size:.76rem;font-weight:900;color:var(--gold);letter-spacing:.04em;margin-bottom:8px}
+.sec .body{font-size:.9rem;line-height:1.85;color:var(--text);white-space:normal}
+.sec .body.long{max-height:260px;overflow:hidden;position:relative}
+.sec .body.long::after{content:'';position:absolute;left:0;right:0;bottom:0;height:70px;background:linear-gradient(transparent,#fff)}
+.sec .open{margin-top:8px;border:none;background:none;color:var(--ink);font-weight:800;font-size:.8rem;cursor:pointer}
+.jo{padding:10px 0;border-top:1px dashed var(--line);font-size:.86rem;line-height:1.8}
+.jo:first-child{border-top:none}
+.jo b{color:var(--ink)}
+mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:2px}
+
+/* folders */
+.fd{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:15px 16px;margin-top:10px;cursor:pointer}
+.fd b{font-size:.98rem;font-weight:800;color:var(--ink)}
+.fd small{display:block;font-size:.74rem;color:var(--sub);margin-top:4px}
+.fd.demo{border-style:dashed}
+.btn{border:none;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer;background:var(--ink);color:#fff;font-size:.84rem}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:8px 11px;font-size:.76rem}
+.issue{margin-top:16px}
+.issue-h{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:900;color:var(--gold);letter-spacing:.03em}
+.issue-h::after{content:'';flex:1;height:1px;background:var(--line)}
+.saved{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-top:8px}
+.saved .t{font-size:.84rem;font-weight:800;color:var(--ink);cursor:pointer;line-height:1.5}
+.saved .m{font-size:.8rem;color:var(--text);margin-top:6px;line-height:1.6;background:var(--paper);border-radius:10px;padding:8px 10px;white-space:pre-wrap}
+.saved .r{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.in{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff;outline:none;font-size:.92rem}
+.in:focus{border-color:var(--gold)}
+.lb{display:block;font-size:.74rem;font-weight:800;color:var(--sub);margin:12px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 11px;font-size:.78rem;font-weight:700;cursor:pointer}
+.chips button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;}
+.nav button{border:none;background:none;padding:10px 0 12px;font-size:.72rem;font-weight:800;color:var(--sub2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav button i{font-style:normal;font-size:1.25rem}
+.nav button.on{color:var(--ink)}
+.foot{font-size:.7rem;color:var(--sub2);text-align:center;line-height:1.8;margin-top:28px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:.8rem;font-weight:700;z-index:99;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.pin{display:flex;justify-content:center;gap:10px;margin:18px 0}
+.pin i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink)}
+.pin i.f{background:var(--ink)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto}
+.pad button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:16px 0;font-size:1.2rem;font-weight:800;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <div class="mark">S</div>
+  <div class="brand">SOBUMO<small>판례를 찾고, 논리를 만들다</small></div>
+  <div class="sp"></div>
+  <button class="lock-btn" id="lockBtn" onclick="lockNow()" style="display:none">🔒 잠그기</button>
+</div></header>
+
+<main class="wrap">
+  <!-- 검색 -->
+  <section id="vSearch">
+    <div class="hero">
+      <h1>판례를 찾고,<br><em>논리를 만들다.</em></h1>
+      <p>법제처 국가법령정보 공식 데이터로 대법원 판례부터 헌재 결정, 법령, 행정심판까지 한 번에 찾고, 사건별로 정리하세요.</p>
+      <div class="tags"><span>대법원·하급심 판례</span><span>헌법재판소</span><span>현행 법령</span><span>법령해석례</span><span>행정심판례</span></div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <form class="sbox" onsubmit="event.preventDefault();doSearch(1)">
+      <input id="q" placeholder="예: 학교폭력 집행정지, 임대차 보증금" autocomplete="off" enterkeyhint="search">
+      <button>검색</button>
+    </form>
+    <div class="opts" id="opts">
+      <label><input type="checkbox" id="optFull"> 본문까지 검색</label>
+      <label id="optSupWrap"><input type="checkbox" id="optSup"> 대법원만</label>
+    </div>
+    <div class="hint" id="hint">추천 검색어 · <b onclick="quick('학교폭력 처분 취소')">학교폭력 처분 취소</b> · <b onclick="quick('임대차보증금 반환')">임대차보증금 반환</b> · <b onclick="quick('중개보수')">중개보수</b> · <b onclick="quick('의료법 리베이트')">의료법 리베이트</b></div>
+    <div id="results"></div>
+  </section>
+
+  <!-- 사건 폴더 -->
+  <section id="vFolders" style="display:none">
+    <div class="meta-row" style="margin-top:22px"><b style="font-size:1.1rem;color:var(--ink)" class="serif">사건 폴더</b><button class="btn sm" onclick="newFolder()">＋ 새 사건</button></div>
+    <div style="font-size:.78rem;color:var(--sub);line-height:1.7">사건마다 폴더를 만들고, 찾은 판례를 쟁점별로 담아 메모하세요. <b>이 기기에만 저장</b>되고 서버로 전송되지 않아요.</div>
+    <div id="folderList"></div>
+    <div id="folderView" style="display:none"></div>
+  </section>
+
+  <div class="foot">SOBUMO는 법률 정보 검색·정리 도구이며 법률 자문을 제공하지 않습니다.<br>중요한 판단은 원문을 확인하고 변호사와 상의하세요.<br>데이터 출처: 법제처 국가법령정보 공동활용</div>
+</main>
+
+<nav class="nav"><div class="nav-in">
+  <button id="nS" class="on" onclick="go('search')"><i>🔎</i>검색</button>
+  <button id="nF" onclick="go('folders')"><i>📁</i>사건 폴더</button>
+</div></nav>
+
+<div class="sheet-bg" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="sheet"><div class="handle"></div><div id="sheetBody"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════ 기본 ════════ */
+const T = {
+  prec: { name: '판례', root: 'PrecSearch', list: 'prec', id: '판례일련번호', title: '사건명', num: '사건번호', date: '선고일자', org: '법원명' },
+  detc: { name: '헌재결정', root: 'DetcSearch', list: 'Detc', id: '헌재결정례일련번호', title: '사건명', num: '사건번호', date: '종국일자', org: null, orgFix: '헌법재판소' },
+  law:  { name: '법령', root: 'LawSearch', list: 'law', id: '법령일련번호', title: '법령명한글', num: '법령구분명', date: '시행일자', org: '소관부처명' },
+  expc: { name: '법령해석', root: 'Expc', list: 'expc', id: '법령해석례일련번호', title: '안건명', num: '안건번호', date: '회신일자', org: '회신기관명' },
+  decc: { name: '행정심판', root: 'Decc', list: 'decc', id: '행정심판재결례일련번호', title: '사건명', num: '사건번호', date: '의결일자', org: '재결청' }
+};
+let target = 'prec', page = 1, lastQ = '', total = 0, items = [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clean = s => String(s ?? '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 1800); }
+function fmtDate(v) { const d = String(v || '').replace(/\D/g, ''); return d.length === 8 ? `${d.slice(0, 4)}. ${+d.slice(4, 6)}. ${+d.slice(6)}.` : (v || ''); }
+function hl(text) { const ws = lastQ.split(/\s+/).filter(w => w.length > 1); let h = esc(text); ws.forEach(w => { h = h.split(esc(w)).join(`<mark>${esc(w)}</mark>`); }); return h; }
+
+/* 저장소 (이 기기) */
+const K = 'sobumo_v1';
+let S = { folders: [], pin: null };
+try { const d = JSON.parse(localStorage.getItem(K) || 'null'); if (d) S = d; } catch (e) {}
+const save = () => { try { localStorage.setItem(K, JSON.stringify(S)); } catch (e) { toast('저장 공간이 부족해요'); } };
+
+/* ════════ 검색 ════════ */
+function renderTabs() {
+  $('tabs').innerHTML = Object.entries(T).map(([k, v]) => `<button class="tab ${k === target ? 'on' : ''}" onclick="setTarget('${k}')">${v.name}</button>`).join('');
+  $('optSupWrap').style.display = target === 'prec' ? '' : 'none';
+  $('optFull').parentElement.style.display = ['prec', 'detc', 'decc', 'expc'].includes(target) ? '' : 'none';
+}
+function setTarget(t) { target = t; renderTabs(); if (lastQ) doSearch(1); }
+function quick(q) { $('q').value = q; doSearch(1); }
+async function doSearch(p) {
+  const q = $('q').value.trim(); if (!q) { $('q').focus(); return; }
+  lastQ = q; page = p;
+  const box = $('results');
+  if (p === 1) { items = []; box.innerHTML = `<div class="empty"><div class="dots"><i></i><i></i><i></i></div>${esc(T[target].name)}을 찾는 중…</div>`; $('hint').style.display = 'none'; }
+  const qs = new URLSearchParams({ mode: 'search', target, query: q, page: p, display: 20 });
+  if ($('optFull').checked && target !== 'law') qs.set('search', '2');
+  if (target === 'prec' && $('optSup').checked) qs.set('org', '400201');
+  try {
+    const d = await (await fetch('/api/law?' + qs)).json();
+    if (d.error) throw new Error(d.error);
+    const cfg = T[target];
+    const root = d[cfg.root] || Object.values(d)[0] || {};
+    let list = root[cfg.list] || []; if (!Array.isArray(list)) list = [list];
+    total = +root.totalCnt || 0;
+    items = items.concat(list);
+    renderList();
+  } catch (e) { box.innerHTML = `<div class="empty">검색하지 못했어요. 잠시 후 다시 시도해 주세요.<br><small>${esc(e.message)}</small></div>`; }
+}
+function renderList() {
+  const cfg = T[target], box = $('results');
+  if (!items.length) { box.innerHTML = `<div class="empty">“${esc(lastQ)}”에 해당하는 ${cfg.name}이 없어요.<br>검색어를 줄이거나 <b>본문까지 검색</b>을 켜보세요.</div>`; return; }
+  box.innerHTML = `<div class="meta-row"><span>“${esc(lastQ)}” · ${cfg.name} <b style="color:var(--ink)">${total.toLocaleString()}</b>건</span><span>${items.length}건 표시</span></div>` +
+    items.map((it, i) => {
+      const org = cfg.org ? it[cfg.org] : cfg.orgFix;
+      return `<div class="item" onclick="openDetail(${i})">
+        <div class="k">${org ? `<span class="chip">${esc(org)}</span>` : ''}${it[cfg.num] ? `<span class="chip g">${esc(it[cfg.num])}</span>` : ''}${it['판결유형'] ? `<span class="chip">${esc(String(it['판결유형']).split(':')[0].trim())}</span>` : ''}</div>
+        <h3>${hl(it[cfg.title] || '(제목 없음)')}</h3>
+        <div class="d">${fmtDate(it[cfg.date])}${it['사건종류명'] ? ' · ' + esc(it['사건종류명']) : ''}${it['법령약칭명'] ? ' · 약칭 ' + esc(it['법령약칭명']) : ''}</div>
+      </div>`;
+    }).join('') + (items.length < total ? `<button class="more" onclick="doSearch(${page + 1})">더 보기 (${total - items.length}건 남음)</button>` : '');
+}
+
+/* ════════ 상세 ════════ */
+let cur = null;   // 현재 열린 문서 {target,id,title,cite,org,date,num}
+function citeOf(t, it) {
+  if (t === 'prec') {
+    const court = it['법원명'] || '대법원', kind = String(it['판결유형'] || '판결').split(':')[0].trim() || '판결';
+    const sel = /자/.test(it['선고'] || '') ? '자' : ' 선고';
+    return `${court} ${fmtDate(it['선고일자'])}${sel} ${it['사건번호']} ${kind}`.replace(/\s+/g, ' ');
+  }
+  if (t === 'detc') return `헌법재판소 ${fmtDate(it['종국일자'])} 선고 ${it['사건번호']} 결정`;
+  if (t === 'expc') return `법제처 ${it['안건번호']} 법령해석 (${fmtDate(it['회신일자'])} 회신)`;
+  if (t === 'decc') return `${it['재결청'] || '행정심판위원회'} ${fmtDate(it['의결일자'])} ${it['사건번호']} 재결`;
+  if (t === 'law') return `「${it['법령명한글']}」`;
+  return '';
+}
+async function openDetail(i) {
+  const it = items[i], cfg = T[target];
+  cur = { target, id: it[cfg.id], title: it[cfg.title], num: it[cfg.num], date: it[cfg.date], org: cfg.org ? it[cfg.org] : cfg.orgFix, cite: citeOf(target, it) };
+  showDetail(cur);
+}
+async function showDetail(doc) {
+  cur = doc;
+  const cfg = T[doc.target];
+  $('sheetBody').innerHTML = `
+    <div class="dt-head"><div class="k">${doc.org ? `<span class="chip">${esc(doc.org)}</span>` : ''}<span class="chip g">${esc(cfg.name)}</span></div>
+    <h2>${esc(doc.title)}</h2><div class="cite" id="citeTxt">${esc(doc.cite)}</div></div>
+    <div class="acts">
+      <button class="a1" onclick="copyCite()">📋 인용 복사</button>
+      <button class="a2" onclick="pickFolder()">📁 폴더에 담기</button>
+      <a class="a3" href="https://www.law.go.kr/${{ prec: '판례', detc: '헌재결정례', law: '법령', expc: '법령해석례', decc: '행정심판례' }[doc.target]}/(${encodeURIComponent(doc.num || '')})" target="_blank" rel="noopener">🔗 원문</a>
+    </div>
+    <div id="dtBody"><div class="empty"><div class="dots"><i></i><i></i><i></i></div>본문 불러오는 중…</div></div>`;
+  $('sheet').classList.add('on');
+  try {
+    const d = await (await fetch(`/api/law?mode=view&target=${doc.target}&id=${doc.id}`)).json();
+    if (d.error) throw new Error(d.error);
+    const body = Object.values(d)[0] || {};
+    doc._body = body;
+    $('dtBody').innerHTML = doc.target === 'law' ? renderLaw(body) : renderDoc(doc.target, body);
+  } catch (e) { $('dtBody').innerHTML = `<div class="empty">본문을 불러오지 못했어요. 🔗 원문 버튼으로 확인해 주세요.</div>`; }
+}
+function secHtml(title, text, long) {
+  const t = clean(text); if (!t) return '';
+  const isLong = long && t.length > 700;
+  return `<div class="sec"><h4>${title}</h4><div class="body ${isLong ? 'long' : ''}">${hl(t).replace(/\n/g, '<br>')}</div>${isLong ? `<button class="open" onclick="this.previousElementSibling.classList.remove('long');this.remove()">전문 펼치기 ▾</button>` : ''}</div>`;
+}
+function renderDoc(t, b) {
+  const order = {
+    prec: [['판시사항'], ['판결요지'], ['참조조문'], ['참조판례'], ['판례내용', 1]],
+    detc: [['판시사항'], ['결정요지'], ['참조조문'], ['참조판례'], ['심판대상조문'], ['전문', 1]],
+    expc: [['질의요지'], ['회답'], ['이유', 1]],
+    decc: [['주문'], ['청구취지'], ['재결요지'], ['이유', 1]]
+  }[t] || [];
+  let h = order.map(([k, long]) => secHtml(k === '판례내용' || k === '전문' ? '전문' : k, b[k], long)).join('');
+  if (!h) h = Object.entries(b).filter(([, v]) => typeof v === 'string' && v.length > 40).map(([k, v]) => secHtml(k, v, true)).join('');
+  return h || '<div class="empty">표시할 본문이 없어요. 🔗 원문에서 확인해 주세요.</div>';
+}
+function renderLaw(b) {
+  const info = b['기본정보'] || {};
+  let jos = (b['조문'] && b['조문']['조문단위']) || []; if (!Array.isArray(jos)) jos = [jos];
+  const head = `<div class="sec"><h4>기본 정보</h4><div class="body">${esc(info['법종구분']?.content || info['법종구분'] || '')} · 시행 ${fmtDate(info['시행일자'])} · 공포 ${fmtDate(info['공포일자'])}<br>소관 ${esc(info['소관부처']?.content || info['소관부처'] || '')}</div></div>`;
+  const jhtml = jos.filter(j => j['조문여부'] === '조문' || j['조문내용']).slice(0, 400).map(j => {
+    let hang = j['항'] || []; if (!Array.isArray(hang)) hang = [hang];
+    const hs = hang.map(h => clean(h['항내용'] || '') + (h['호'] ? '\n' + (Array.isArray(h['호']) ? h['호'] : [h['호']]).map(x => '  ' + clean(x['호내용'] || '')).join('\n') : '')).join('\n');
+    return `<div class="jo">${hl(clean(j['조문내용'] || '')).replace(/\n/g, '<br>')}${hs ? '<br>' + hl(hs).replace(/\n/g, '<br>') : ''}</div>`;
+  }).join('');
+  return head + `<div class="sec"><h4>조문</h4><div class="body">${jhtml || '조문을 불러오지 못했어요'}</div></div>`;
+}
+function copyCite() {
+  const b = cur._body || {};
+  const summary = clean(b['판결요지'] || b['결정요지'] || b['회답'] || b['재결요지'] || '');
+  const txt = cur.cite + (summary ? `\n[요지] ${summary}` : '');
+  navigator.clipboard?.writeText(txt).then(() => toast('인용문을 복사했어요 📋'), () => toast('복사하지 못했어요'));
+}
+function closeSheet() { $('sheet').classList.remove('on'); }
+
+/* ════════ 사건 폴더 ════════ */
+const DEMO = { id: 'demo', demo: true, name: '예시) 전세보증금 반환 청구', desc: '임대인이 계약 종료 후 보증금을 돌려주지 않는 사건', issues: ['계약 종료와 보증금 반환 시기', '지연손해금', '임차권등기명령'], docs: [] };
+function folders() { return S.folders.length ? S.folders : [DEMO]; }
+function renderFolders() {
+  $('folderView').style.display = 'none'; $('folderList').style.display = '';
+  $('folderList').innerHTML = folders().map(f => `<div class="fd ${f.demo ? 'demo' : ''}" onclick="openFolder('${f.id}')">
+    <b>📁 ${esc(f.name)}</b><small>${f.demo ? '샘플 폴더예요 · ＋ 새 사건으로 내 사건을 만들어 보세요' : `판례 ${f.docs.length}건 · 쟁점 ${f.issues.length}개${f.desc ? ' · ' + esc(f.desc) : ''}`}</small></div>`).join('');
+}
+function newFolder() {
+  const name = prompt('사건 이름을 입력하세요 (예: 행정소송 - 징계처분 취소)'); if (!name) return;
+  const issues = (prompt('쟁점을 쉼표로 적어주세요 (나중에 추가 가능)\n예: 처분사유 존부, 재량권 일탈·남용, 절차 위반') || '').split(',').map(s => s.trim()).filter(Boolean);
+  S.folders.unshift({ id: 'f' + Date.now().toString(36), name: name.trim(), desc: '', issues: issues.length ? issues : ['일반'], docs: [], created: Date.now() });
+  save(); renderFolders(); toast('사건 폴더를 만들었어요');
+}
+function openFolder(id) {
+  const f = folders().find(x => x.id === id); if (!f) return;
+  $('folderList').style.display = 'none';
+  const v = $('folderView'); v.style.display = '';
+  const byIssue = {}; f.issues.forEach(i => byIssue[i] = []); f.docs.forEach(d => (byIssue[d.issue] = byIssue[d.issue] || []).push(d));
+  v.innerHTML = `
+    <div style="margin-top:16px;display:flex;gap:8px;align-items:center"><button class="btn ghost sm" onclick="renderFolders()">← 목록</button><div style="flex:1"></div>
+      ${f.demo ? '' : `<button class="btn ghost sm" onclick="exportFolder('${f.id}')">📄 인용 목록 복사</button><button class="btn ghost sm" onclick="folderMenu('${f.id}')">⋯</button>`}</div>
+    <h2 class="serif" style="font-size:1.2rem;color:var(--ink);margin-top:14px">${esc(f.name)}</h2>
+    ${f.desc ? `<div style="font-size:.82rem;color:var(--sub);margin-top:4px">${esc(f.desc)}</div>` : ''}
+    ${f.demo ? `<div class="sec" style="margin-top:14px"><h4>이렇게 써보세요</h4><div class="body" style="font-size:.84rem">① 검색에서 판례를 찾고 <b>📁 폴더에 담기</b><br>② 쟁점을 고르고 <b>“우리 사건과 비슷한 점 / 상대방 반론”</b>을 메모<br>③ 서면 쓸 때 <b>📄 인용 목록 복사</b>로 쟁점별 판례 인용을 한 번에</div></div>` : ''}
+    ${Object.entries(byIssue).map(([iss, ds]) => `<div class="issue"><div class="issue-h">${esc(iss)} · ${ds.length}</div>
+      ${ds.map(d => `<div class="saved"><div class="t" onclick='showDetail(${JSON.stringify(d.doc).replace(/'/g, "&#39;")})'>${esc(d.doc.cite)}</div>
+        <div style="font-size:.78rem;color:var(--sub);margin-top:3px">${esc(d.doc.title)}</div>
+        ${d.memo ? `<div class="m">${esc(d.memo)}</div>` : ''}
+        ${f.demo ? '' : `<div class="r"><button class="btn ghost sm" onclick="editMemo('${f.id}','${d.id}')">✏️ 메모</button><button class="btn ghost sm" onclick="moveDoc('${f.id}','${d.id}')">↔ 쟁점</button><button class="btn ghost sm" onclick="rmDoc('${f.id}','${d.id}')">삭제</button></div>`}</div>`).join('') || '<div style="font-size:.78rem;color:var(--sub2);padding:10px 2px">아직 담은 판례가 없어요</div>'}</div>`).join('')}
+    ${f.demo ? '' : `<button class="more" onclick="addIssue('${f.id}')">＋ 쟁점 추가</button>`}`;
+}
+function F(id) { return S.folders.find(x => x.id === id); }
+function pickFolder() {
+  if (!S.folders.length) { if (confirm('아직 사건 폴더가 없어요. 새로 만들까요?')) { newFolder(); if (S.folders.length) pickFolder(); } return; }
+  $('sheetBody').insertAdjacentHTML('beforeend', `<div class="sec" id="pickBox"><h4>어느 사건에 담을까요?</h4>
+    <select class="in" id="pkF" onchange="pkIssues()">${S.folders.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('')}</select>
+    <label class="lb">쟁점</label><div class="chips" id="pkI"></div>
+    <label class="lb">메모 <small style="font-weight:600;color:var(--sub2)">우리 사건과 비슷한 점, 상대방 반론 등</small></label>
+    <textarea class="in" id="pkM" rows="3"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn ghost" onclick="document.getElementById('pickBox').remove()">취소</button><button class="btn" style="flex:1" onclick="doPick()">담기</button></div></div>`);
+  pkIssues(); $('pickBox').scrollIntoView({ behavior: 'smooth' });
+}
+let pkIssue = '';
+function pkIssues() { const f = F($('pkF').value); pkIssue = f.issues[0]; $('pkI').innerHTML = f.issues.map(i => `<button class="${i === pkIssue ? 'on' : ''}" onclick="pkIssue=this.textContent;[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${esc(i)}</button>`).join(''); }
+function doPick() {
+  const f = F($('pkF').value); const { _body, ...doc } = cur;
+  f.docs.push({ id: 'd' + Date.now().toString(36), issue: pkIssue, memo: $('pkM').value.trim(), doc, at: Date.now() });
+  save(); $('pickBox').remove(); toast(`“${f.name}”에 담았어요 📁`);
+}
+function editMemo(fid, did) { const d = F(fid).docs.find(x => x.id === did); const m = prompt('메모', d.memo || ''); if (m === null) return; d.memo = m.trim(); save(); openFolder(fid); }
+function moveDoc(fid, did) { const f = F(fid), d = f.docs.find(x => x.id === did); const n = prompt('옮길 쟁점 이름\n현재 쟁점: ' + f.issues.join(', '), d.issue); if (!n) return; if (!f.issues.includes(n.trim())) f.issues.push(n.trim()); d.issue = n.trim(); save(); openFolder(fid); }
+function rmDoc(fid, did) { if (!confirm('이 판례를 폴더에서 뺄까요?')) return; const f = F(fid); f.docs = f.docs.filter(x => x.id !== did); save(); openFolder(fid); }
+function addIssue(fid) { const n = prompt('추가할 쟁점'); if (!n) return; F(fid).issues.push(n.trim()); save(); openFolder(fid); }
+function folderMenu(fid) {
+  const f = F(fid); const a = prompt(`① 이름 바꾸기  ② 설명 쓰기  ③ 폴더 삭제\n번호를 입력하세요`); if (!a) return;
+  if (a.trim() === '1') { const n = prompt('새 이름', f.name); if (n) f.name = n.trim(); }
+  else if (a.trim() === '2') { const n = prompt('사건 설명', f.desc || ''); if (n !== null) f.desc = n.trim(); }
+  else if (a.trim() === '3') { if (confirm(`“${f.name}” 폴더를 삭제할까요? 되돌릴 수 없어요.`)) { S.folders = S.folders.filter(x => x.id !== fid); save(); renderFolders(); return; } }
+  save(); openFolder(fid);
+}
+function exportFolder(fid) {
+  const f = F(fid); const lines = [`[${f.name}] 판례 정리`];
+  f.issues.forEach(iss => { const ds = f.docs.filter(d => d.issue === iss); if (!ds.length) return; lines.push('', `■ ${iss}`); ds.forEach(d => { lines.push(`- ${d.doc.cite}`); if (d.memo) lines.push(`  (메모) ${d.memo}`); }); });
+  navigator.clipboard?.writeText(lines.join('\n')).then(() => toast('인용 목록을 복사했어요 📄'));
+}
+
+/* ════════ 잠금 (사건 폴더 보호, 이 기기) ════════ */
+let unlocked = false;
+async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sobumo:' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+function pinPad(title, cb) {
+  let v = '';
+  const draw = () => { $('sheetBody').innerHTML = `<div style="text-align:center;padding:10px 0"><div class="serif" style="font-size:1.1rem;color:var(--ink)">${title}</div><div class="pin">${[0, 1, 2, 3].map(i => `<i class="${i < v.length ? 'f' : ''}"></i>`).join('')}</div>
+    <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}">${k}</button>`).join('')}</div></div>`;
+    $('sheetBody').querySelectorAll('.pad button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === '⌫') v = v.slice(0, -1); else if (v.length < 4) v += k; draw(); if (v.length === 4) setTimeout(() => cb(v), 120); }); };
+  draw(); $('sheet').classList.add('on');
+}
+function needUnlock(then) {
+  if (unlocked || !S.pin) return then();
+  pinPad('사건 폴더 잠금 해제', async v => { if (await sha(v) === S.pin) { unlocked = true; closeSheet(); $('lockBtn').style.display = ''; then(); } else { toast('비밀번호가 달라요'); needUnlock(then); } });
+}
+function lockNow() { unlocked = false; $('lockBtn').style.display = 'none'; go('search'); toast('잠갔어요 🔒'); }
+function offerPin() {
+  if (S.pin || !S.folders.length || S.pinAsked) return;
+  S.pinAsked = true; save();
+  if (confirm('사건 폴더를 비밀번호 4자리로 잠글까요?\n(다른 사람이 이 폰으로 볼 때 폴더를 숨겨요)')) pinPad('새 비밀번호 4자리', async v => { S.pin = await sha(v); unlocked = true; save(); closeSheet(); $('lockBtn').style.display = ''; toast('잠금을 설정했어요'); });
+}
+
+/* ════════ 화면 전환 ════════ */
+function go(v) {
+  if (v === 'folders') return needUnlock(() => { $('vSearch').style.display = 'none'; $('vFolders').style.display = ''; $('nS').classList.remove('on'); $('nF').classList.add('on'); renderFolders(); window.scrollTo(0, 0); setTimeout(offerPin, 400); });
+  $('vFolders').style.display = 'none'; $('vSearch').style.display = ''; $('nF').classList.remove('on'); $('nS').classList.add('on');
+}
+renderTabs();
+</script>
+</body>
+</html>

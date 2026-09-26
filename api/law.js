@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const target = TARGETS.includes(req.query.target) ? req.query.target : "prec";
   const view = req.query.mode === "view";
   const qs = new URLSearchParams({ OC, target, type: "JSON" });
-  if (view) qs.set("ID", String(req.query.id || "").replace(/\D/g, ""));
+  if (view) qs.set(target === "law" ? "MST" : "ID", String(req.query.id || "").replace(/\D/g, ""));
   else for (const k of ["query", "page", "display", "search", "org", "sort", "JO", "nb", "prncYd"]) if (req.query[k]) qs.set(k, String(req.query[k]));
   const url = `https://www.law.go.kr/DRF/${view ? "lawService" : "lawSearch"}.do?${qs}`;
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 9000);
