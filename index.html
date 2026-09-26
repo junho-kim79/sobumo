@@ -34,6 +34,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 /* hero */
 .hero{margin:18px 0 14px;padding:26px 22px 22px;border-radius:24px;background:linear-gradient(145deg,#16233A 0%,#24385A 100%);color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow)}
 .hero::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(201,166,107,.25);box-shadow:0 0 0 30px rgba(201,166,107,.05),0 0 0 60px rgba(201,166,107,.03)}
+.hero .mean{position:relative;display:flex;gap:7px;margin-bottom:14px;font:600 .82rem/1 'Noto Serif KR',Georgia,serif;color:rgba(255,255,255,.7);letter-spacing:.02em}
+.hero .mean b{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:3px;border-radius:7px;background:rgba(201,166,107,.18);border:1px solid rgba(201,166,107,.45);color:var(--gold2);font-weight:800;font-size:.85rem}
 .hero h1{font:800 1.55rem/1.35 'Noto Serif KR',Georgia,serif;letter-spacing:-.01em;position:relative}
 .hero h1 em{font-style:normal;color:var(--gold2)}
 .hero p{font-size:.8rem;color:rgba(255,255,255,.72);margin-top:8px;line-height:1.6;position:relative}
@@ -134,7 +136,7 @@ mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:
 <body>
 <header class="top"><div class="top-in">
   <div class="mark">S</div>
-  <div class="brand">SOBUMO<small>판례를 찾고, 논리를 만들다</small></div>
+  <div class="brand">SOBUMO<small>소송을 부드럽게, 모두에게</small></div>
   <div class="sp"></div>
   <button class="lock-btn" id="lockBtn" onclick="lockNow()" style="display:none">🔒 잠그기</button>
 </div></header>
@@ -143,6 +145,7 @@ mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:
   <!-- 검색 -->
   <section id="vSearch">
     <div class="hero">
+      <div class="mean"><span><b>소</b>송을</span><span><b>부</b>드럽게,</span><span><b>모</b>두에게</span></div>
       <h1>판례를 찾고,<br><em>논리를 만들다.</em></h1>
       <p>법제처 국가법령정보 공식 데이터로 대법원 판례부터 헌재 결정, 법령, 행정심판까지 한 번에 찾고, 사건별로 정리하세요.</p>
       <div class="tags"><span>대법원·하급심 판례</span><span>헌법재판소</span><span>현행 법령</span><span>법령해석례</span><span>행정심판례</span></div>
