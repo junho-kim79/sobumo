@@ -153,7 +153,7 @@ mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:
       <button>검색</button>
     </form>
     <div class="opts" id="opts">
-      <label><input type="checkbox" id="optFull"> 본문까지 검색</label>
+      <label><input type="checkbox" id="optTitle"> 사건명에서만 찾기</label>
       <label id="optSupWrap"><input type="checkbox" id="optSup"> 대법원만</label>
     </div>
     <div class="hint" id="hint">추천 검색어 · <b onclick="quick('학교폭력 처분 취소')">학교폭력 처분 취소</b> · <b onclick="quick('임대차보증금 반환')">임대차보증금 반환</b> · <b onclick="quick('중개보수')">중개보수</b> · <b onclick="quick('의료법 리베이트')">의료법 리베이트</b></div>
@@ -206,7 +206,7 @@ const save = () => { try { localStorage.setItem(K, JSON.stringify(S)); } catch (
 function renderTabs() {
   $('tabs').innerHTML = Object.entries(T).map(([k, v]) => `<button class="tab ${k === target ? 'on' : ''}" onclick="setTarget('${k}')">${v.name}</button>`).join('');
   $('optSupWrap').style.display = target === 'prec' ? '' : 'none';
-  $('optFull').parentElement.style.display = ['prec', 'detc', 'decc', 'expc'].includes(target) ? '' : 'none';
+  $('optTitle').parentElement.style.display = ['prec', 'detc', 'decc', 'expc'].includes(target) ? '' : 'none';
 }
 function setTarget(t) { target = t; renderTabs(); if (lastQ) doSearch(1); }
 function quick(q) { $('q').value = q; doSearch(1); }
@@ -216,7 +216,7 @@ async function doSearch(p) {
   const box = $('results');
   if (p === 1) { items = []; box.innerHTML = `<div class="empty"><div class="dots"><i></i><i></i><i></i></div>${esc(T[target].name)}을 찾는 중…</div>`; $('hint').style.display = 'none'; }
   const qs = new URLSearchParams({ mode: 'search', target, query: q, page: p, display: 20 });
-  if ($('optFull').checked && target !== 'law') qs.set('search', '2');
+  if (!$('optTitle').checked && target !== 'law') qs.set('search', '2');
   if (target === 'prec' && $('optSup').checked) qs.set('org', '400201');
   try {
     const d = await (await fetch('/api/law?' + qs)).json();
@@ -231,7 +231,7 @@ async function doSearch(p) {
 }
 function renderList() {
   const cfg = T[target], box = $('results');
-  if (!items.length) { box.innerHTML = `<div class="empty">“${esc(lastQ)}”에 해당하는 ${cfg.name}이 없어요.<br>검색어를 줄이거나 <b>본문까지 검색</b>을 켜보세요.</div>`; return; }
+  if (!items.length) { box.innerHTML = `<div class="empty">“${esc(lastQ)}”에 해당하는 ${cfg.name}이 없어요.<br>검색어를 줄여보세요.</div>`; return; }
   box.innerHTML = `<div class="meta-row"><span>“${esc(lastQ)}” · ${cfg.name} <b style="color:var(--ink)">${total.toLocaleString()}</b>건</span><span>${items.length}건 표시</span></div>` +
     items.map((it, i) => {
       const org = cfg.org ? it[cfg.org] : cfg.orgFix;
