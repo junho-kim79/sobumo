@@ -77,7 +77,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sheet-bg.on{display:flex}
 .sheet{width:100%;max-width:720px;max-height:94vh;overflow:auto;background:var(--paper);border-radius:24px 24px 0 0;padding:10px 18px 30px;animation:up .22s ease}
 @keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
-.handle{width:40px;height:4px;border-radius:4px;background:rgba(22,35,58,.2);margin:4px auto 12px}
+.handle{width:40px;height:4px;border-radius:4px;background:rgba(22,35,58,.2)}
+.sh-top{position:sticky;top:-10px;z-index:2;display:flex;align-items:center;justify-content:space-between;margin:-10px -18px 10px;padding:10px 12px 8px;background:var(--paper)}
+.sh-top button{border:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:800;color:var(--ink);cursor:pointer;min-width:44px}
 .dt-head .k{display:flex;gap:6px;flex-wrap:wrap;font-size:.7rem;font-weight:800}
 .dt-head h2{font:800 1.12rem/1.5 'Noto Serif KR',Georgia,serif;margin-top:10px;color:var(--ink)}
 .cite{margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:.82rem;font-weight:700;color:var(--ink)}
@@ -135,8 +137,8 @@ mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:
 </head>
 <body>
 <header class="top"><div class="top-in">
-  <div class="mark">S</div>
-  <div class="brand">SOBUMO<small>소송을 부드럽게, 모두에게</small></div>
+  <div class="mark" onclick="home()" style="cursor:pointer">S</div>
+  <div class="brand" onclick="home()" style="cursor:pointer">SOBUMO<small>소송의 부담을 줄이고, 모두에게</small></div>
   <div class="sp"></div>
   <button class="lock-btn" id="lockBtn" onclick="lockNow()" style="display:none">🔒 잠그기</button>
 </div></header>
@@ -145,7 +147,7 @@ mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:
   <!-- 검색 -->
   <section id="vSearch">
     <div class="hero">
-      <div class="mean"><span><b>소</b>송을</span><span><b>부</b>드럽게,</span><span><b>모</b>두에게</span></div>
+      <div class="mean"><span><b>소</b>송의</span><span><b>부</b>담을 줄이고,</span><span><b>모</b>두에게</span></div>
       <h1>판례를 찾고,<br><em>논리를 만들다.</em></h1>
       <p>법제처 국가법령정보 공식 데이터로 대법원 판례부터 헌재 결정, 법령, 행정심판까지 한 번에 찾고, 사건별로 정리하세요.</p>
       <div class="tags"><span>대법원·하급심 판례</span><span>헌법재판소</span><span>현행 법령</span><span>법령해석례</span><span>행정심판례</span></div>
@@ -179,7 +181,7 @@ mark{background:rgba(201,166,107,.35);color:inherit;padding:0 1px;border-radius:
   <button id="nF" onclick="go('folders')"><i>📁</i>사건 폴더</button>
 </div></nav>
 
-<div class="sheet-bg" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="sheet"><div class="handle"></div><div id="sheetBody"></div></div></div>
+<div class="sheet-bg" id="sheet" onclick="if(event.target===this)closeSheet()"><div class="sheet"><div class="sh-top"><button onclick="closeSheetUser()">← 뒤로</button><div class="handle"></div><button onclick="closeSheetUser()" aria-label="닫기">✕</button></div><div id="sheetBody"></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -215,6 +217,7 @@ function setTarget(t) { target = t; renderTabs(); if (lastQ) doSearch(1); }
 function quick(q) { $('q').value = q; doSearch(1); }
 async function doSearch(p) {
   const q = $('q').value.trim(); if (!q) { $('q').focus(); return; }
+  if (p === 1 && !lastQ) nav('results');
   lastQ = q; page = p;
   const box = $('results');
   if (p === 1) { items = []; box.innerHTML = `<div class="empty"><div class="dots"><i></i><i></i><i></i></div>${esc(T[target].name)}을 찾는 중…</div>`; $('hint').style.display = 'none'; }
@@ -235,7 +238,7 @@ async function doSearch(p) {
 function renderList() {
   const cfg = T[target], box = $('results');
   if (!items.length) { box.innerHTML = `<div class="empty">“${esc(lastQ)}”에 해당하는 ${cfg.name}이 없어요.<br>검색어를 줄여보세요.</div>`; return; }
-  box.innerHTML = `<div class="meta-row"><span>“${esc(lastQ)}” · ${cfg.name} <b style="color:var(--ink)">${total.toLocaleString()}</b>건</span><span>${items.length}건 표시</span></div>` +
+  box.innerHTML = `<div class="meta-row"><span>“${esc(lastQ)}” · ${cfg.name} <b style="color:var(--ink)">${total.toLocaleString()}</b>건</span><span>${items.length}건 표시 · <b style="color:var(--ink);cursor:pointer;border-bottom:1px dashed var(--gold)" onclick="home()">처음으로</b></span></div>` +
     items.map((it, i) => {
       const org = cfg.org ? it[cfg.org] : cfg.orgFix;
       return `<div class="item" onclick="openDetail(${i})">
@@ -277,7 +280,7 @@ async function showDetail(doc) {
       <a class="a3" href="https://www.law.go.kr/${{ prec: '판례', detc: '헌재결정례', law: '법령', expc: '법령해석례', decc: '행정심판례' }[doc.target]}/(${encodeURIComponent(doc.num || '')})" target="_blank" rel="noopener">🔗 원문</a>
     </div>
     <div id="dtBody"><div class="empty"><div class="dots"><i></i><i></i><i></i></div>본문 불러오는 중…</div></div>`;
-  $('sheet').classList.add('on');
+  openSheet();
   try {
     const d = await (await fetch(`/api/law?mode=view&target=${doc.target}&id=${doc.id}`)).json();
     if (d.error) throw new Error(d.error);
@@ -320,6 +323,25 @@ function copyCite() {
   navigator.clipboard?.writeText(txt).then(() => toast('인용문을 복사했어요 📋'), () => toast('복사하지 못했어요'));
 }
 function closeSheet() { $('sheet').classList.remove('on'); }
+function openSheet() { if (!$('sheet').classList.contains('on')) nav('sheet'); $('sheet').classList.add('on'); }
+function closeSheetUser() { if (history.state && history.state.tag === 'sheet') history.back(); else closeSheet(); }
+
+/* ════════ 뒤로가기 · 처음으로 ════════ */
+function nav(tag) { try { history.pushState({ tag }, ''); } catch (e) {} }
+function home() {
+  closeSheet(); go('search');
+  $('q').value = ''; lastQ = ''; items = []; total = 0;
+  $('results').innerHTML = ''; $('hint').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.addEventListener('popstate', () => {
+  if ($('sheet').classList.contains('on')) return closeSheet();
+  if ($('vFolders').style.display !== 'none') {
+    if ($('folderView').style.display !== 'none') return renderFolders();
+    return go('search');
+  }
+  if (lastQ) home();
+});
 
 /* ════════ 사건 폴더 ════════ */
 const DEMO = { id: 'demo', demo: true, name: '예시) 전세보증금 반환 청구', desc: '임대인이 계약 종료 후 보증금을 돌려주지 않는 사건', issues: ['계약 종료와 보증금 반환 시기', '지연손해금', '임차권등기명령'], docs: [] };
@@ -335,13 +357,14 @@ function newFolder() {
   S.folders.unshift({ id: 'f' + Date.now().toString(36), name: name.trim(), desc: '', issues: issues.length ? issues : ['일반'], docs: [], created: Date.now() });
   save(); renderFolders(); toast('사건 폴더를 만들었어요');
 }
-function openFolder(id) {
+function openFolder(id, noPush) {
   const f = folders().find(x => x.id === id); if (!f) return;
+  if (!noPush && $('folderView').style.display === 'none') nav('folder');
   $('folderList').style.display = 'none';
   const v = $('folderView'); v.style.display = '';
   const byIssue = {}; f.issues.forEach(i => byIssue[i] = []); f.docs.forEach(d => (byIssue[d.issue] = byIssue[d.issue] || []).push(d));
   v.innerHTML = `
-    <div style="margin-top:16px;display:flex;gap:8px;align-items:center"><button class="btn ghost sm" onclick="renderFolders()">← 목록</button><div style="flex:1"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;align-items:center"><button class="btn ghost sm" onclick="history.state&&history.state.tag==='folder'?history.back():renderFolders()">← 목록</button><div style="flex:1"></div>
       ${f.demo ? '' : `<button class="btn ghost sm" onclick="exportFolder('${f.id}')">📄 인용 목록 복사</button><button class="btn ghost sm" onclick="folderMenu('${f.id}')">⋯</button>`}</div>
     <h2 class="serif" style="font-size:1.2rem;color:var(--ink);margin-top:14px">${esc(f.name)}</h2>
     ${f.desc ? `<div style="font-size:.82rem;color:var(--sub);margin-top:4px">${esc(f.desc)}</div>` : ''}
@@ -371,16 +394,16 @@ function doPick() {
   f.docs.push({ id: 'd' + Date.now().toString(36), issue: pkIssue, memo: $('pkM').value.trim(), doc, at: Date.now() });
   save(); $('pickBox').remove(); toast(`“${f.name}”에 담았어요 📁`);
 }
-function editMemo(fid, did) { const d = F(fid).docs.find(x => x.id === did); const m = prompt('메모', d.memo || ''); if (m === null) return; d.memo = m.trim(); save(); openFolder(fid); }
-function moveDoc(fid, did) { const f = F(fid), d = f.docs.find(x => x.id === did); const n = prompt('옮길 쟁점 이름\n현재 쟁점: ' + f.issues.join(', '), d.issue); if (!n) return; if (!f.issues.includes(n.trim())) f.issues.push(n.trim()); d.issue = n.trim(); save(); openFolder(fid); }
-function rmDoc(fid, did) { if (!confirm('이 판례를 폴더에서 뺄까요?')) return; const f = F(fid); f.docs = f.docs.filter(x => x.id !== did); save(); openFolder(fid); }
-function addIssue(fid) { const n = prompt('추가할 쟁점'); if (!n) return; F(fid).issues.push(n.trim()); save(); openFolder(fid); }
+function editMemo(fid, did) { const d = F(fid).docs.find(x => x.id === did); const m = prompt('메모', d.memo || ''); if (m === null) return; d.memo = m.trim(); save(); openFolder(fid, 1); }
+function moveDoc(fid, did) { const f = F(fid), d = f.docs.find(x => x.id === did); const n = prompt('옮길 쟁점 이름\n현재 쟁점: ' + f.issues.join(', '), d.issue); if (!n) return; if (!f.issues.includes(n.trim())) f.issues.push(n.trim()); d.issue = n.trim(); save(); openFolder(fid, 1); }
+function rmDoc(fid, did) { if (!confirm('이 판례를 폴더에서 뺄까요?')) return; const f = F(fid); f.docs = f.docs.filter(x => x.id !== did); save(); openFolder(fid, 1); }
+function addIssue(fid) { const n = prompt('추가할 쟁점'); if (!n) return; F(fid).issues.push(n.trim()); save(); openFolder(fid, 1); }
 function folderMenu(fid) {
   const f = F(fid); const a = prompt(`① 이름 바꾸기  ② 설명 쓰기  ③ 폴더 삭제\n번호를 입력하세요`); if (!a) return;
   if (a.trim() === '1') { const n = prompt('새 이름', f.name); if (n) f.name = n.trim(); }
   else if (a.trim() === '2') { const n = prompt('사건 설명', f.desc || ''); if (n !== null) f.desc = n.trim(); }
   else if (a.trim() === '3') { if (confirm(`“${f.name}” 폴더를 삭제할까요? 되돌릴 수 없어요.`)) { S.folders = S.folders.filter(x => x.id !== fid); save(); renderFolders(); return; } }
-  save(); openFolder(fid);
+  save(); openFolder(fid, 1);
 }
 function exportFolder(fid) {
   const f = F(fid); const lines = [`[${f.name}] 판례 정리`];
@@ -396,7 +419,7 @@ function pinPad(title, cb) {
   const draw = () => { $('sheetBody').innerHTML = `<div style="text-align:center;padding:10px 0"><div class="serif" style="font-size:1.1rem;color:var(--ink)">${title}</div><div class="pin">${[0, 1, 2, 3].map(i => `<i class="${i < v.length ? 'f' : ''}"></i>`).join('')}</div>
     <div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button data-k="${k}">${k}</button>`).join('')}</div></div>`;
     $('sheetBody').querySelectorAll('.pad button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === '⌫') v = v.slice(0, -1); else if (v.length < 4) v += k; draw(); if (v.length === 4) setTimeout(() => cb(v), 120); }); };
-  draw(); $('sheet').classList.add('on');
+  draw(); openSheet();
 }
 function needUnlock(then) {
   if (unlocked || !S.pin) return then();
@@ -411,7 +434,7 @@ function offerPin() {
 
 /* ════════ 화면 전환 ════════ */
 function go(v) {
-  if (v === 'folders') return needUnlock(() => { $('vSearch').style.display = 'none'; $('vFolders').style.display = ''; $('nS').classList.remove('on'); $('nF').classList.add('on'); renderFolders(); window.scrollTo(0, 0); setTimeout(offerPin, 400); });
+  if (v === 'folders') return needUnlock(() => { if ($('vFolders').style.display === 'none') nav('folders'); $('vSearch').style.display = 'none'; $('vFolders').style.display = ''; $('nS').classList.remove('on'); $('nF').classList.add('on'); renderFolders(); window.scrollTo(0, 0); setTimeout(offerPin, 400); });
   $('vFolders').style.display = 'none'; $('vSearch').style.display = ''; $('nF').classList.remove('on'); $('nS').classList.add('on');
 }
 renderTabs();
