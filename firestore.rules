@@ -1,0 +1,128 @@
+rules_version = '2';
+
+// 재고한눈에 (SOBUMO) — Firestore 보안 규칙
+// 역할: owner(원장·최고관리자) / manager(사무장·행정부원장) / staff(간호사·일반 직원)
+// 원칙
+//  1) 병원 직원 명단(members)에 '재직(active)'으로 있는 사람만 그 병원 데이터를 읽고 쓴다.
+//  2) 재고 수량이 바뀌면 같은 저장 묶음 안에 변경 이력(logs)이 반드시 함께 있어야 한다.
+//  3) 이력은 지우거나 고칠 수 없다. 퇴사해도 기록은 남는다.
+
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function memPath(h) { return /databases/$(db)/documents/hospitals/$(h)/members/$(request.auth.uid); }
+    function isMember(h) {
+      return signedIn() && exists(memPath(h)) && get(memPath(h)).data.status == 'active';
+    }
+    function myRole(h) { return get(memPath(h)).data.role; }
+    function isOwner(h) { return isMember(h) && myRole(h) == 'owner'; }
+    function isManager(h) { return isMember(h) && myRole(h) in ['owner', 'manager']; }
+    function strLen(v, lo, hi) { return v is string && v.size() >= lo && v.size() <= hi; }
+
+    // 내 계정 → 소속 병원 연결
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /hospitals/{h} {
+      allow get: if isMember(h);
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && strLen(request.resource.data.name, 1, 60)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(h)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && strLen(request.resource.data.name, 1, 60);
+      allow delete: if false;
+
+      // 직원 명단
+      match /members/{uid} {
+        function inv() {
+          return get(/databases/$(db)/documents/hospitals/$(h)/invites/$(request.resource.data.inviteCode)).data;
+        }
+        allow read: if isMember(h);
+        allow create: if signedIn() && uid == request.auth.uid
+          && request.resource.data.uid == uid
+          && request.resource.data.status == 'active'
+          && strLen(request.resource.data.name, 1, 30)
+          && request.resource.data.joinedAt == request.time
+          && (
+            // 병원을 처음 만드는 사람 = 원장(owner)
+            (!exists(/databases/$(db)/documents/hospitals/$(h))
+              && getAfter(/databases/$(db)/documents/hospitals/$(h)).data.ownerUid == request.auth.uid
+              && request.resource.data.role == 'owner')
+            ||
+            // 초대 링크로 들어오는 직원: 초대에 적힌 역할 그대로, 유효기간 안에서만
+            (request.resource.data.inviteCode is string
+              && exists(/databases/$(db)/documents/hospitals/$(h)/invites/$(request.resource.data.inviteCode))
+              && inv().expiresAt > request.time
+              && inv().role == request.resource.data.role
+              && request.resource.data.role in ['manager', 'staff'])
+          );
+        allow update: if
+          // 원장: 다른 직원의 역할·직책·재직상태 변경 (원장 자신과 다른 원장은 못 바꿈)
+          (isOwner(h) && uid != request.auth.uid
+            && resource.data.role != 'owner'
+            && request.resource.data.role in ['manager', 'staff']
+            && request.resource.data.status in ['active', 'left']
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'title', 'status', 'leftAt']))
+          ||
+          // 본인: 이름·직책 표시만 수정
+          (isMember(h) && uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'title'])
+            && strLen(request.resource.data.name, 1, 30));
+        allow delete: if false;
+      }
+
+      // 초대 링크 (코드 자체가 비밀번호 역할)
+      match /invites/{code} {
+        allow get: if signedIn();
+        allow list: if isOwner(h);
+        allow create: if isOwner(h) && code.size() >= 16
+          && request.resource.data.role in ['manager', 'staff']
+          && request.resource.data.createdBy == request.auth.uid;
+        allow delete: if isOwner(h);
+        allow update: if false;
+      }
+
+      // 재고 품목
+      match /items/{id} {
+        function d() { return request.resource.data; }
+        function validItem() {
+          return strLen(d().name, 1, 100)
+            && d().qty is int && d().qty >= 0
+            && d().minQty is int && d().minQty >= 0
+            && d().updatedBy == request.auth.uid
+            && d().updatedAt == request.time;
+        }
+        // 같은 저장 묶음 안에 이 품목의 이력이 새로 써져 있어야 함
+        function logged() {
+          return d().lastLogId is string
+            && existsAfter(/databases/$(db)/documents/hospitals/$(h)/logs/$(d().lastLogId))
+            && !exists(/databases/$(db)/documents/hospitals/$(h)/logs/$(d().lastLogId))
+            && getAfter(/databases/$(db)/documents/hospitals/$(h)/logs/$(d().lastLogId)).data.itemId == id
+            && getAfter(/databases/$(db)/documents/hospitals/$(h)/logs/$(d().lastLogId)).data.after == d().qty;
+        }
+        function onlyQty() {
+          return d().diff(resource.data).affectedKeys().hasOnly(['qty', 'updatedAt', 'updatedBy', 'lastLogId']);
+        }
+        allow read: if isMember(h);
+        allow create: if isManager(h) && validItem() && logged();
+        allow update: if isMember(h) && validItem() && logged() && (isManager(h) || onlyQty());
+        allow delete: if false; // 삭제 대신 archived 표시 (이력 보존)
+      }
+
+      // 변경 이력: 추가만 가능
+      match /logs/{id} {
+        allow read: if isMember(h);
+        allow create: if isMember(h)
+          && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.itemId is string;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
