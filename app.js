@@ -198,6 +198,9 @@ function lowView() {
 
 function logView() {
   if (!st.logs.length) return '<div class="empty">아직 변경 기록이 없어요</div>';
+  return `<div class="log-wrap">${logList()}</div>`;
+}
+function logList() {
   let lastDay = '', out = '';
   for (const l of st.logs) {
     const d = l.at, day = `${d.getMonth() + 1}월 ${d.getDate()}일`;
@@ -232,8 +235,8 @@ function staffView() {
     <button class="btn blue wide" id="mkInv">초대 링크 만들기</button>
     ${inv.length ? `<p class="sec-t" style="margin-top:16px">사용 가능한 초대 링크</p>${inv.map((i) => `<div class="step"><div class="num">${i.role === 'manager' ? '사' : '직'}</div><div style="flex:1;font-size:.86rem"><b>${ROLE[i.role]}</b>${i.title ? ` · ${esc(i.title)}` : ''}<br><small style="color:var(--mute)">${i.expiresAt ? `${i.expiresAt.getMonth() + 1}/${i.expiresAt.getDate()}까지` : ''}</small></div><button class="btn" style="min-height:36px;padding:0 12px;font-size:.8rem" data-share="${i.id}">보내기</button><button class="btn red" style="min-height:36px;padding:0 12px;font-size:.8rem" data-del="${i.id}">취소</button></div>`).join('')}` : ''}
   </div>
-  <p class="sec-t">재직 중 ${act.length}명</p>${act.map((m) => memberRow(m, true)).join('')}
-  ${left.length ? `<p class="sec-t">퇴사 ${left.length}명 · 접근 차단됨, 기록은 보존</p>${left.map((m) => memberRow(m, true)).join('')}` : ''}
+  <p class="sec-t">재직 중 ${act.length}명</p><div class="staff-grid">${act.map((m) => memberRow(m, true)).join('')}</div>
+  ${left.length ? `<p class="sec-t">퇴사 ${left.length}명 · 접근 차단됨, 기록은 보존</p><div class="staff-grid">${left.map((m) => memberRow(m, true)).join('')}</div>` : ''}
   <p class="sec-t">권한 안내</p>
   <div class="card" style="font-size:.84rem;line-height:1.8;color:var(--mid)">
     <b style="color:var(--ink)">원장·최고관리자</b> 전체 조회, 직원 초대·권한·퇴사 처리<br>
