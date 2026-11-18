@@ -7,7 +7,7 @@ const ROLE_SHORT = { owner: '원장', manager: '사무장', staff: '직원' };
 const fmt = (n) => Number(n || 0).toLocaleString('ko-KR');
 
 let api, user, hid, hospital, member;
-const st = { items: [], logs: [], members: [], invites: [], tab: 'stock', q: '', flash: new Set() };
+const st = { items: [], logs: [], members: [], invites: [], invoices: [], tab: 'stock', q: '', flash: new Set() };
 
 function toast(msg) {
   document.querySelectorAll('.toast').forEach((t) => t.remove());
@@ -150,6 +150,7 @@ function startApp() {
     if (mine) { member = { ...member, ...mine }; if (mine.status !== 'active') return blockedScreen(); }
     render();
   });
+  if (isManager()) api.watchInvoices(hid, (v) => { st.invoices = v; if (st.tab === 'in') render(); });
   if (member.role === 'owner') api.watchInvites(hid, (v) => { st.invites = v; if (st.tab === 'staff') render(); });
   render();
 }
@@ -157,7 +158,8 @@ function startApp() {
 function render() {
   if ($('#screen').hidden) return;
   const low = st.items.filter(isLow).length;
-  const tabs = [['stock', '📦', '재고'], ['low', '🚨', '부족'], ['log', '🕘', '이력'], ['staff', member.role === 'owner' ? '👥' : '👤', member.role === 'owner' ? '직원' : '내 정보']];
+  const tabs = [['stock', '📦', '재고'], ['low', '🚨', '부족'], ...(isManager() ? [['in', '🧾', '입고']] : []), ['log', '🕘', '이력'], ['staff', member.role === 'owner' ? '👥' : '👤', member.role === 'owner' ? '직원' : '내 정보']];
+  $('#tabsIn').style.gridTemplateColumns = `repeat(${tabs.length},1fr)`;
   $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
   $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (b) { st.tab = b.dataset.t; render(); scrollTo(0, 0); } };
 
@@ -166,7 +168,7 @@ function render() {
     <div class="t-logo"><small>SOBUMO</small>재고<span>한눈에</span></div>
     <div class="t-me"><b>${esc(hospital?.name)}</b><span class="live"></span>${esc(member.name)} · ${ROLE_SHORT[member.role]}</div>
   </div></header>`;
-  const body = { stock: stockView, low: lowView, log: logView, staff: member.role === 'owner' ? staffView : meView }[st.tab]();
+  const body = { stock: stockView, low: lowView, in: inView, log: logView, staff: member.role === 'owner' ? staffView : meView }[st.tab]();
   $('#screen').innerHTML = top + `<div class="page">${body}</div>` + (st.tab === 'stock' && isManager() ? `<button class="fab" id="add">＋ 품목 추가</button>` : '') + (isDemo ? demoBar() : '');
   bind();
   if (keepFocus) { const q = $('#q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
@@ -205,9 +207,9 @@ function logList() {
   for (const l of st.logs) {
     const d = l.at, day = `${d.getMonth() + 1}월 ${d.getDate()}일`;
     if (day !== lastDay) { out += `<div class="day">${day}</div>`; lastDay = day; }
-    const icon = { create: '🆕', meta: '✏️', archive: '🗑️', delta: '🔢', set: '✍️' }[l.type] || '🔢';
+    const icon = { create: '🆕', meta: '✏️', archive: '🗑️', delta: '🔢', set: '✍️', in: '🧾', undo: '↩️' }[l.type] || '🔢';
     const dl = l.delta ? `<span class="dl ${l.delta < 0 ? 'minus' : 'plus'}">${l.delta > 0 ? '+' : ''}${fmt(l.delta)}</span>` : '';
-    const what = l.type === 'create' ? `품목 등록 (${fmt(l.after)})` : l.type === 'meta' ? '품목 정보 수정' : l.type === 'archive' ? '품목 삭제(보관)' : `${fmt(l.before)} → <b>${fmt(l.after)}</b>`;
+    const what = l.type === 'in' && l.isNewItem ? `명세서 입고 · 새 품목 (${fmt(l.after)})` : l.type === 'create' ? `품목 등록 (${fmt(l.after)})` : l.type === 'meta' ? '품목 정보 수정' : l.type === 'archive' ? '품목 삭제(보관)' : `${fmt(l.before)} → <b>${fmt(l.after)}</b>`;
     out += `<div class="log" style="margin-top:6px"><div class="ic">${icon}</div><div class="tx"><b>${esc(l.itemName)}</b><div style="font-size:.86rem">${what}${l.memo ? ` <span style="color:var(--mid)">· ${esc(l.memo)}</span>` : ''}</div><small>${esc(l.byName)} · ${ago(l.at)}</small></div>${dl}</div>`;
   }
   return out;
@@ -266,6 +268,7 @@ function bind() {
   const q = $('#q'); if (q) q.oninput = () => { st.q = q.value; render(); };
   document.querySelectorAll('.item').forEach((b) => (b.onclick = () => qtySheet(st.items.find((x) => x.id === b.dataset.id))));
   const add = $('#add'); if (add) add.onclick = () => itemSheet();
+  bindIn();
   const out = $('#out'); if (out) out.onclick = () => api.signOut();
   const ms = $('#meSave'); if (ms) ms.onclick = async () => {
     const name = $('#meName').value.trim(); if (!name) return toast('이름을 입력해 주세요');
@@ -334,12 +337,16 @@ function itemSheet(it) {
       <div><label class="f">단위</label><input class="in" id="iU" maxlength="10" value="${esc(it?.unit || '개')}"></div>
       <div><label class="f">최소 수량 (이하면 부족)</label><input class="in" id="iM" type="number" inputmode="numeric" min="0" value="${it?.minQty ?? 10}"></div>
     </div>
+    <label class="f">박스 환산 (거래명세서 자동 입고에 사용 · 선택)</label>
+    <div class="row" style="align-items:center;gap:6px"><span style="flex:none;font-weight:800">1</span><input class="in" id="iPU" maxlength="10" value="${esc(it?.packUnit || '')}" placeholder="박스"><span style="flex:none;font-weight:800">=</span><input class="in" id="iPQ" type="number" inputmode="numeric" min="0" value="${it?.packQty || ''}" placeholder="100"><span style="flex:none;color:var(--mid)" id="iPUu">${esc(it?.unit || '개')}</span></div>
     ${isNew ? '<label class="f">현재 수량</label><input class="in" id="iQ" type="number" inputmode="numeric" min="0" value="0">' : ''}
     <div class="s-actions"><button class="btn" id="ic">닫기</button><button class="btn blue" id="is">${isNew ? '추가' : '저장'}</button></div>
     ${isNew ? '' : '<button class="s-link" id="ix" style="color:var(--red)">이 품목 삭제 (기록은 보존)</button>'}`);
   $('#ic', d).onclick = () => d.remove();
   $('#is', d).onclick = async (e) => {
     const f = { name: $('#iN', d).value.trim(), spec: $('#iS', d).value.trim(), unit: $('#iU', d).value.trim(), minQty: Math.max(0, parseInt($('#iM', d).value || '0', 10)) };
+    const pq = parseInt($('#iPQ', d).value || '0', 10), pu = $('#iPU', d).value.trim();
+    if (pq > 0 && pu) { f.packQty = pq; f.packUnit = pu; } else if (!isNew) { f.packQty = 0; f.packUnit = ''; }
     if (!f.name) return toast('품목명을 입력해 주세요');
     e.target.disabled = true;
     try {
@@ -376,4 +383,85 @@ async function shareInvite(code) {
   if (navigator.share) { try { await navigator.share({ title: '재고한눈에 초대', text }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(text); toast('초대 링크를 복사했어요. 단톡방에 붙여넣어 주세요'); }
   catch { sheet(`<h3>초대 링크</h3><div class="link-box">${esc(url)}</div><p class="s-sub" style="margin-top:8px">길게 눌러 복사해 주세요</p>`); }
+}
+
+/* ── 거래명세서 입고 ── */
+const won = (n) => '₩' + fmt(Math.round(n || 0));
+function monthTotal(off = 0) {
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth() + off;
+  const from = new Date(y, m, 1), to = new Date(y, m + 1, 1);
+  return st.invoices.filter((v) => v.status === 'in' && v.at >= from && v.at < to).reduce((a, v) => a + (v.total || v.lines.reduce((s, l) => s + (l.amount || 0), 0)), 0);
+}
+function inView() {
+  const list = st.invoices;
+  return `
+  <div class="card in-hero">
+    <h2>🧾 거래명세서로 입고</h2>
+    <p class="d">명세서를 찍으면 AI가 품목·수량·금액을 읽어 <b>바로 재고에 더합니다.</b> 사진은 저장하지 않아요. 잘못 들어가면 건별로 되돌릴 수 있어요.</p>
+    <label class="cta" style="width:100%;cursor:pointer">📷 명세서 찍기 / 사진 고르기<input type="file" accept="image/*" id="invFile" hidden></label>
+  </div>
+  <div class="sum" style="margin-top:12px"><div><small>이번 달 매입</small><b>${won(monthTotal())}</b></div><div><small>지난달 매입</small><b>${won(monthTotal(-1))}</b></div><div><small>이번 달 명세서</small><b>${st.invoices.filter((v) => v.status === 'in' && v.at.getMonth() === new Date().getMonth() && v.at.getFullYear() === new Date().getFullYear()).length}건</b></div></div>
+  <p class="sec-t">최근 입고</p>
+  <div class="list inv-list">${list.map((v) => `<button class="item inv ${v.status === 'undone' ? 'undone' : ''}" data-inv="${v.id}">
+    <div class="nm"><b>${esc(v.supplier || '거래처 미확인')}${v.status === 'undone' ? '<span class="tag" style="background:#EEF0F2;color:var(--mid)">취소됨</span>' : v.lowCount ? `<span class="tag low">확인 ${v.lowCount}</span>` : ''}</b><small>${esc(v.date || '')} · ${v.lines.length}품목 · ${esc(v.byName || '')}</small></div>
+    <div class="q"><b style="font-size:1.1rem">${won(v.total)}</b></div></button>`).join('') || '<div class="empty">아직 입고한 명세서가 없어요</div>'}</div>`;
+}
+function bindIn() {
+  const f = $('#invFile'); if (f) f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) runInvoice(file); };
+  document.querySelectorAll('[data-inv]').forEach((b) => (b.onclick = () => invoiceSheet(st.invoices.find((v) => v.id === b.dataset.inv))));
+}
+// 사진을 1600px 이하 JPEG로 줄여서 전송 (빠르고 저렴하게)
+function shrink(file, max = 1600) {
+  return new Promise((ok, bad) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => bad(new Error('사진을 열 수 없어요'));
+    img.src = url;
+  });
+}
+async function runInvoice(file) {
+  const d = sheet(`<div style="text-align:center;padding:30px 0"><div class="spin"></div><h3 style="margin-top:16px">AI가 명세서를 읽고 있어요</h3><p class="s-sub" id="invStep">사진 준비 중…</p></div>`);
+  d.onclick = null;
+  try {
+    const img = await shrink(file);
+    $('#invStep', d).textContent = '품목·수량·금액 읽는 중… (10~20초)';
+    const parsed = await api.readInvoice(img, st.items);
+    if (!parsed.lines?.length) throw new Error('읽을 수 있는 품목이 없어요. 더 밝고 반듯하게 다시 찍어 주세요');
+    $('#invStep', d).textContent = '재고에 반영하는 중…';
+    const rec = await api.applyInvoice(hid, parsed, member.name);
+    d.remove();
+    invoiceSheet(rec, true);
+  } catch (e) {
+    console.error(e);
+    d.querySelector('.sheet').innerHTML = `<h3>인식하지 못했어요</h3><p class="s-sub" style="margin-top:6px">${esc(e.message || '잠시 후 다시 시도해 주세요')}</p><div class="s-actions"><button class="btn" id="x">닫기</button></div>`;
+    $('#x', d).onclick = () => d.remove();
+  }
+}
+function invoiceSheet(v, fresh) {
+  if (!v) return;
+  const undone = v.status === 'undone';
+  const d = sheet(`
+    ${fresh ? '<p style="font-weight:900;color:var(--green);margin-bottom:6px">✓ 입고 완료</p>' : ''}
+    <h3>${esc(v.supplier || '거래처 미확인')}</h3>
+    <p class="s-sub">${esc(v.date || '')} · ${v.lines.length}품목 · 합계 ${won(v.total)}${undone ? ' · <b style="color:var(--red)">취소됨</b>' : ''}</p>
+    ${v.lowCount && !undone ? `<p class="notice" style="margin-top:12px">노란 줄 ${v.lowCount}개는 AI가 확신하지 못한 부분이에요. 수량이 맞는지 한 번 봐 주세요. 틀렸으면 재고 탭에서 바로 고치면 됩니다.</p>` : ''}
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${v.lines.map((l) => `
+      <div class="inv-line ${l.confidence === 'low' ? 'low' : ''}">
+        <div style="flex:1;min-width:0"><b>${esc(l.itemName || l.name)}</b>${l.isNew ? '<span class="tag" style="background:#E8EEF8;color:var(--blue-d)">새 품목</span>' : ''}
+          <small>명세서: ${esc(l.name)}${l.spec ? ' ' + esc(l.spec) : ''} · ${fmt(l.qty)}${esc(l.unit || '')}${l.unitPrice ? ' × ' + fmt(l.unitPrice) : ''}${l.note ? ' · ⚠ ' + esc(l.note) : ''}</small></div>
+        <div style="text-align:right;flex:none"><b class="dl plus">+${fmt(l.applied)}</b><small>${l.amount ? won(l.amount) : ''}</small></div>
+      </div>`).join('')}</div>
+    <div class="s-actions"><button class="btn" id="vc">닫기</button>${undone ? '' : '<button class="btn red" id="vu">↩ 이 명세서 입고 되돌리기</button>'}</div>
+    <p class="s-sub" style="text-align:center;margin-top:10px;font-size:.74rem">AI 인식 결과의 확인 책임은 사용자에게 있습니다</p>`);
+  $('#vc', d).onclick = () => d.remove();
+  const vu = $('#vu', d); if (vu) vu.onclick = async () => {
+    if (!confirm('이 명세서로 들어간 수량을 모두 빼고 입고를 취소할까요?\n(취소 기록도 이력에 남습니다)')) return;
+    vu.disabled = true;
+    try { await api.undoInvoice(hid, v, member.name); d.remove(); toast('입고를 되돌렸어요'); } catch (e) { toast(e.message || errMsg(e)); vu.disabled = false; }
+  };
 }

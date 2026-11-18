@@ -114,6 +114,21 @@ service cloud.firestore {
         allow delete: if false; // 삭제 대신 archived 표시 (이력 보존)
       }
 
+      // 거래명세서 입고 기록 (사진은 저장하지 않음, 인식 결과만)
+      match /invoices/{id} {
+        allow read: if isMember(h);
+        allow create: if isManager(h)
+          && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.status == 'in';
+        // 되돌리기만 허용
+        allow update: if isManager(h)
+          && resource.data.status == 'in'
+          && request.resource.data.status == 'undone'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'undoneAt', 'undoneBy']);
+        allow delete: if false;
+      }
+
       // 변경 이력: 추가만 가능
       match /logs/{id} {
         allow read: if isMember(h);
