@@ -1,0 +1,16 @@
+{
+  "name": "재고한눈에",
+  "short_name": "재고한눈에",
+  "description": "병원 소모품 재고·입고·발주·매입을 직원 모두가 함께 관리하는 무료 서비스 (SOBUMO by ALLAI GROUP)",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F3EC",
+  "theme_color": "#2e7d4f",
+  "lang": "ko",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

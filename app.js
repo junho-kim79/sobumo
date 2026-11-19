@@ -377,7 +377,8 @@ function meBlock() {
     <div class="row" style="margin-top:14px"><button class="btn green" id="meSave">저장</button><button class="btn" id="out">로그아웃</button></div>
     <p class="lead" style="font-size:.76rem;margin-top:10px">${esc(user.email)} · ${ROLE[member.role]}</p>
   </div>
-  <p class="foot-note" style="text-align:center;margin-top:24px">SOBUMO 재고한눈에 · by ALLAI GROUP</p>`;
+  <p class="foot-note" style="text-align:center;margin-top:24px">SOBUMO 재고한눈에 · by ALLAI GROUP</p>
+  <p style="text-align:center;margin-top:6px;font-size:.76rem"><a href="/privacy.html" style="color:var(--mute)">개인정보처리방침 · 계정 삭제 요청</a></p>`;
 }
 function meView() { return `<p class="sec-t" style="margin-top:4px">${esc(hospital?.name)}</p>${st.members.filter((m) => m.status === 'active').map((m) => memberRow(m, false)).join('')}` + meBlock(); }
 

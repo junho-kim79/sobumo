@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>개인정보처리방침 - 재고한눈에</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+  :root { --text:#1F2328; --sub:#5d6b76; --line:#E6E0D6; --g:#2e7d4f; --bg:#F7F3EC; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.75 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif; word-break:keep-all; }
+  main { max-width:760px; margin:0 auto; padding:28px 18px 60px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; letter-spacing:-.02em; }
+  .meta { color:var(--sub); font-size:.85rem; margin-bottom:22px; }
+  h2 { font-size:1.05rem; margin:28px 0 8px; padding-top:18px; border-top:1px solid var(--line); color:var(--g); }
+  p, li { margin:6px 0; }
+  ul { padding-left:20px; }
+  table { width:100%; border-collapse:collapse; font-size:.88rem; margin:8px 0; background:#fff; }
+  th, td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#EEF6E6; }
+  .box { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  a { color:var(--g); }
+</style>
+</head>
+<body>
+<main>
+  <h1>개인정보처리방침</h1>
+  <div class="meta">재고한눈에 (SOBUMO · by ALLAI GROUP) · 시행일 2026년 11월 19일</div>
+
+  <p>재고한눈에(이하 "서비스")는 병의원 직원들이 소모품·의약품 재고, 입고, 발주, 매입을 함께 관리하는 서비스입니다. 서비스는 이용자의 개인정보를 꼭 필요한 만큼만 처리하며, 이 방침은 어떤 정보를 왜 처리하고 어떻게 보호하는지 안내합니다.</p>
+
+  <h2>1. 처리하는 정보</h2>
+  <table>
+    <tr><th>구분</th><th>처리 항목</th><th>목적</th></tr>
+    <tr><td>로그인</td><td>Google 계정 이메일, 이름, 계정 식별값</td><td>본인 확인, 직원별 접속과 변경 기록</td></tr>
+    <tr><td>병원·직원</td><td>병원 이름, 직원 이름·직책·권한·재직 상태, 가입일</td><td>병원별 공간 구분, 직원 초대와 권한 관리</td></tr>
+    <tr><td>재고·이력</td><td>품목, 수량, 변경 전후 수량, 변경한 직원 이름, 변경 시각, 메모</td><td>재고 공유와 변경 이력 보관</td></tr>
+    <tr><td>입고·매입</td><td>거래명세서에서 읽은 거래처, 거래일자, 품목, 수량, 단가, 금액</td><td>자동 입고, 월별 매입·결제 현황</td></tr>
+    <tr><td>도매상·발주</td><td>도매상 상호, 담당자 이름, 전화번호, 메모, 발주 요청과 발주 기록</td><td>발주 관리</td></tr>
+  </table>
+  <p>병원 데이터는 그 병원 직원 명단에 '재직' 상태로 등록된 사람만 볼 수 있습니다. 운영자는 서비스 운영과 장애 대응에 꼭 필요한 경우가 아니면 병원 데이터를 열람하지 않습니다.</p>
+
+  <h2>2. 거래명세서 사진</h2>
+  <div class="box">
+    <p><b>사진은 저장하지 않습니다.</b> 이용자가 찍거나 고른 거래명세서 사진은 글자를 읽기 위해 AI 인식 서버로 한 번 전송되고, 인식 결과(거래처·품목·수량·금액)만 저장됩니다. 사진 원본은 이용자의 휴대폰에만 남습니다.</p>
+    <p>거래명세서에는 병원 이름, 사업자 정보, 거래처 정보가 함께 찍혀 있을 수 있으므로, 환자 정보 등 필요 없는 내용이 사진에 담기지 않도록 주의해 주세요.</p>
+  </div>
+
+  <h2>3. 금액 정보 보호</h2>
+  <p>단가·금액·매입 합계는 원장(최고관리자)과 사무장, 그리고 원장이 '금액 보기'를 허락한 직원만 볼 수 있습니다. 허락받지 않은 직원은 화면에 금액이 표시되지 않으며, 서버 보안 규칙으로 금액 데이터 자체를 읽을 수 없도록 막혀 있습니다.</p>
+
+  <h2>4. 처리 위탁 및 국외 이전</h2>
+  <p>서비스 운영을 위해 아래 업체의 서비스를 이용합니다. 수집한 개인정보를 이 목적 외의 제3자에게 제공하거나 판매하지 않습니다.</p>
+  <table>
+    <tr><th>업체</th><th>내용</th><th>위치</th></tr>
+    <tr><td>Google LLC (Firebase)</td><td>로그인(Google 계정 인증), 병원·재고·이력·매입 데이터 저장</td><td>데이터 저장: 대한민국(서울 리전), 인증: 미국 등</td></tr>
+    <tr><td>Vercel Inc.</td><td>서비스 화면과 서버 기능 호스팅, 거래명세서 사진 중계(저장하지 않음)</td><td>미국 등</td></tr>
+    <tr><td>DeepSeek</td><td>거래명세서 사진의 글자 인식(사진과 품목 목록만 전송, 인식 후 결과만 받음)</td><td>중국 등</td></tr>
+  </table>
+
+  <h2>5. 보관 기간과 삭제</h2>
+  <ul>
+    <li>재고 변경 이력과 입고 기록은 병원의 업무 기록으로 보관되며, 직원이 퇴사해도 그 직원이 남긴 기록은 병원에 남습니다. 퇴사 처리된 직원은 즉시 접근이 차단됩니다.</li>
+    <li>병원 공간 전체 삭제나 개인 계정 삭제를 요청하면 확인 후 지체 없이 삭제합니다.</li>
+  </ul>
+
+  <h2 id="delete">6. 계정 및 데이터 삭제 요청</h2>
+  <div class="box">
+    <p>아래 문의처로 <b>가입한 Google 이메일</b>과 함께 "계정 삭제" 또는 "병원 데이터 삭제"를 요청해 주세요. 본인 확인 후 7일 이내에 처리하고 결과를 알려 드립니다.</p>
+    <ul>
+      <li>계정 삭제: 로그인 정보와 직원 명단의 이름·이메일을 삭제합니다. 병원 업무 기록(재고 이력 등)에 남은 변경자 이름은 "삭제된 사용자"로 바뀝니다.</li>
+      <li>병원 데이터 삭제(원장만 요청 가능): 해당 병원의 재고, 이력, 입고·매입, 도매상, 발주, 직원 정보를 모두 삭제합니다.</li>
+    </ul>
+  </div>
+
+  <h2>7. 이용자의 권리</h2>
+  <p>이용자는 언제든지 자신의 개인정보 열람, 정정, 삭제, 처리 정지를 요청할 수 있습니다. 이름과 직책은 앱의 '내 정보'에서 직접 고칠 수 있습니다.</p>
+
+  <h2>8. 기기 권한</h2>
+  <ul>
+    <li>카메라·사진: 거래명세서를 찍거나 고를 때만 사용합니다. 사진은 저장하지 않습니다.</li>
+  </ul>
+
+  <h2>9. 아동의 개인정보</h2>
+  <p>이 서비스는 병의원 직원을 위한 업무용 서비스로, 만 14세 미만 아동을 대상으로 하지 않으며 아동의 개인정보를 수집하지 않습니다.</p>
+
+  <h2>10. 안전성 확보 조치</h2>
+  <p>서버와의 통신은 암호화(HTTPS)하며, 병원 데이터는 병원별로 분리되어 그 병원 직원만 접근할 수 있도록 보안 규칙으로 제한합니다. 재고 변경 이력은 지우거나 고칠 수 없게 되어 있습니다.</p>
+
+  <h2>11. 문의처</h2>
+  <p>개인정보 관련 문의 및 삭제 요청: <a href="mailto:k.no1.realtor@gmail.com">k.no1.realtor@gmail.com</a></p>
+
+  <h2>12. 방침 변경</h2>
+  <p>이 방침이 바뀌면 서비스 화면과 이 페이지를 통해 알려 드립니다.</p>
+
+  <p style="margin-top:30px"><a href="/">← 재고한눈에로 돌아가기</a></p>
+</main>
+</body>
+</html>
