@@ -428,9 +428,10 @@ function qtySheet(it) {
     <div class="qbtns"><button class="m" data-d="-10">−10</button><button class="m" data-d="-1">−1</button><button class="p" data-d="1">+1</button><button class="p" data-d="10">+10</button></div>
     <input class="in" id="qm" style="margin-top:12px" maxlength="60" placeholder="메모 (선택) 예: 시술 사용, 파손">
     <div class="s-actions"><button class="btn" id="qc">닫기</button><button class="btn blue" id="qs">저장</button></div>
-    <button class="s-link" id="qr">📮 이 품목 발주 요청하기</button>
+    <div class="row" style="margin-top:4px"><button class="s-link" id="qr" style="margin:0">📮 발주 요청</button>${canInvoice() ? '<button class="s-link" id="qret" style="margin:0">↩️ 반품하기</button>' : ''}</div>
     ${isManager() ? '<button class="s-link" id="qe" style="margin-top:6px">품목 정보 수정 · 삭제</button>' : ''}`);
   $('#qr', d).onclick = () => { d.remove(); requestSheet(it); };
+  const qret = $('#qret', d); if (qret) qret.onclick = () => { d.remove(); returnSheet(it); };
   const v = $('#qv', d), qd = $('#qd', d);
   const upd = () => {
     const n = Math.max(0, parseInt(v.value || '0', 10)); const diff = n - it.qty;
@@ -702,15 +703,15 @@ function editInvoiceSheet(v) {
 }
 
 /* ── 반품: 품목을 골라 재고에서 빼기 (손글씨 인수증은 읽지 않음) ── */
-function returnSheet() {
-  const pick = new Map(); // itemId → qty
+function returnSheet(pre) {
+  const pick = new Map(pre ? [[pre.id, 1]] : []); // itemId → qty
   const today = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
   const d = sheet(`<h3>↩️ 반품 처리</h3><p class="s-sub">반품할 품목을 골라 수량을 넣으면 재고에서 빠지고 이력에 남아요. 업체와 주고받는 인수증은 각자 보관해 주세요.</p>
     <div class="row" style="margin-top:10px"><div><label class="f" style="margin-top:0">거래처</label><input class="in" id="rS" maxlength="60" list="rSL" placeholder="예: 임강약품"><datalist id="rSL">${st.suppliers.map((x) => `<option value="${esc(x.name)}">`).join('')}</datalist></div>
       <div style="flex:none;width:150px"><label class="f" style="margin-top:0">반품일</label><input class="in" id="rD" type="date" value="${today}"></div></div>
     <label class="f">반품할 품목</label>
     <div id="rPicked" style="display:flex;flex-direction:column;gap:6px"></div>
-    <input class="in" id="rQ" style="margin-top:8px" placeholder="🔍 품목 검색해서 추가">
+    <input class="in" id="rQ" style="margin-top:8px" placeholder="🔍 다른 품목도 검색해서 추가">
     <div id="rList" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:220px;overflow:auto"></div>
     ${canPrice() ? '<label class="f">반품 금액 (선택)</label><input class="in" id="rA" type="number" inputmode="numeric" min="0" placeholder="모르면 비워 두고 나중에 입력해도 돼요"><p class="s-sub" style="font-size:.76rem;margin-top:4px">입력한 금액은 이번 달 매입에서 빠져요</p>' : '<p class="perm-note" style="margin-top:12px">🔒 반품 금액은 병원 설정에 따라 원장님·사무장님이 따로 입력해요.</p>'}
     <input class="in" id="rM" style="margin-top:12px" maxlength="60" placeholder="사유 (선택) 예: 유효기간 임박, 파손">
@@ -725,12 +726,13 @@ function returnSheet() {
   };
   const drawList = () => {
     const q = $('#rQ', d).value.trim().toLowerCase();
-    const list = st.items.filter((x) => !pick.has(x.id) && (!q || (x.name + ' ' + (x.spec || '')).toLowerCase().includes(q))).slice(0, 30);
-    $('#rList', d).innerHTML = list.map((x) => `<button class="item" data-ra="${x.id}" style="padding:8px 12px"><div class="nm"><b style="font-size:.92rem">${esc(x.name)}</b><small>${esc(x.spec || '')}</small></div><div class="q"><b style="font-size:.95rem">${fmt(x.qty)}</b><small>${esc(x.unit || '')}</small></div></button>`).join('') || '<p class="s-sub" style="font-size:.8rem">검색 결과가 없어요</p>';
+    const list = !q && pick.size ? [] : st.items.filter((x) => !pick.has(x.id) && (!q || (x.name + ' ' + (x.spec || '')).toLowerCase().includes(q))).slice(0, 30);
+    $('#rList', d).innerHTML = list.map((x) => `<button class="item" data-ra="${x.id}" style="padding:8px 12px"><div class="nm"><b style="font-size:.92rem">${esc(x.name)}</b><small>${esc(x.spec || '')}</small></div><div class="q"><b style="font-size:.95rem">${fmt(x.qty)}</b><small>${esc(x.unit || '')}</small></div></button>`).join('') || (q ? '<p class="s-sub" style="font-size:.8rem">검색 결과가 없어요</p>' : '');
     d.querySelectorAll('[data-ra]').forEach((x) => (x.onclick = () => { pick.set(x.dataset.ra, 1); $('#rQ', d).value = ''; drawPicked(); drawList(); }));
   };
   $('#rQ', d).oninput = drawList;
   drawPicked(); drawList();
+  if (pre) { const x = $(`[data-rq="${pre.id}"]`, d); x?.focus(); x?.select(); }
   $('#rc', d).onclick = () => d.remove();
   $('#rs', d).onclick = async (e) => {
     if (!pick.size) return toast('반품할 품목을 골라 주세요');
