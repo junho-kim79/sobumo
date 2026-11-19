@@ -14,7 +14,8 @@ function toast(msg) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t); setTimeout(() => t.remove(), 2400);
 }
-let splashOn = false, splashPending = null;
+let splashOn = false, splashPending = null, appReady = false, readyOk;
+const appReadyP = new Promise((r) => (readyOk = r));
 function show(id) {
   if (splashOn && id !== 'landing') {
     splashPending = id;
@@ -59,31 +60,41 @@ function splash(manual) {
   splashPending = manual ? 'screen tabs' : null; splashOn = true;
   document.body.classList.add('splash');
   ['loading', 'landing', 'screen', 'tabs'].forEach((x) => ($('#' + x).hidden = !(x === 'landing' || (x === 'tabs' && manual))));
-  document.body.classList.toggle('splash-ready', !!manual);
+  let cached = null; try { cached = JSON.parse(localStorage.getItem('sobumo.tabs') || 'null'); } catch (e) {}
+  if (manual) render(); else if (cached?.length) { drawTabs(cached); $('#tabs').hidden = false; }
+  document.body.classList.toggle('splash-ready', !!manual || !!cached?.length);
   scrollTo(0, 0);
   const v = $('#heroV'); try { v.currentTime = 0; v.play(); } catch (e) {}
 }
+function unsplash() { splashOn = false; document.body.classList.remove('splash', 'splash-ready'); $('#tabs').hidden = true; }
 function endSplash() {
   if (!splashOn) return;
   splashOn = false;
   document.body.classList.remove('splash', 'splash-ready');
   show(splashPending || 'loading');
+  if (appReady) render();
 }
 
 /* ── 시작 ── */
 (async function boot() {
-  if (!configured) { show('landing'); $('#cfgInfo').hidden = false; $('#startBtn').disabled = true; return; }
+  // 전에 로그인했던 폰이면 Firebase를 기다리지 않고 간판+탭을 바로 보여 줌
+  try { if (!joinCode && localStorage.getItem('sobumo.tabs')) splash(); } catch (e) {}
+  if (!configured) { unsplash(); show('landing'); $('#cfgInfo').hidden = false; $('#startBtn').disabled = true; return; }
   try { api = await createApi(); }
-  catch (e) { console.error(e); show('landing'); $('#cfgInfo').hidden = false; $('#cfgInfo').textContent = '연결이 원활하지 않아요. 잠시 후 새로고침해 주세요.'; $('#startBtn').disabled = true; return; }
+  catch (e) { console.error(e); unsplash(); show('landing'); $('#cfgInfo').hidden = false; $('#cfgInfo').textContent = '연결이 원활하지 않아요. 잠시 후 새로고침해 주세요.'; $('#startBtn').disabled = true; return; }
   $('#startBtn').onclick = async () => { try { await api.signIn(); } catch (e) { toast('로그인에 실패했어요'); } };
   if (joinCode) { $('#joinInfo').hidden = false; $('#joinInfo').textContent = '병원 초대 링크로 들어오셨어요. 구글 계정으로 시작하면 바로 합류합니다.'; $('#startBtn').innerHTML = '🎁 초대받은 병원 합류하기 <span>›</span>'; }
   let firstAuth = true;
   api.onAuth(async (u) => {
     user = u;
     const first = firstAuth; firstAuth = false;
-    if (!u) { show('landing'); return; }
-    if (first && !joinCode) splash(); else show('loading');
-    try { await route(); } catch (e) { console.error(e); toast('불러오지 못했어요'); show('landing'); }
+    if (!u) {
+      try { localStorage.removeItem('sobumo.tabs'); } catch (e) {}
+      unsplash();
+      show('landing'); return;
+    }
+    if (first && !joinCode) { if (!splashOn) splash(); } else show('loading');
+    try { await route(); } catch (e) { console.error(e); toast('불러오지 못했어요'); unsplash(); show('landing'); }
   });
 })();
 
@@ -172,6 +183,7 @@ function blockedScreen() {
 
 /* ── 메인 앱 ── */
 function startApp() {
+  appReady = true; readyOk();
   show('screen tabs');
   let firstItems = true;
   api.watchItems(hid, (items) => {
@@ -200,13 +212,26 @@ function startApp() {
   render();
 }
 
+// 하단 탭: 간판 화면에서도 바로 누를 수 있도록 마지막 탭 구성을 기억해 둠
+function drawTabs(tabs, low = 0) {
+  $('#tabsIn').style.gridTemplateColumns = `repeat(${tabs.length},1fr)`;
+  $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${k === 'cam' ? 'cam' : ''} ${!splashOn && st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
+  $('#tabsIn').onclick = (e) => {
+    const b = e.target.closest('.tab'); if (!b) return;
+    if (b.dataset.t !== 'cam') st.tab = b.dataset.t;
+    if (splashOn) endSplash();
+    if (b.dataset.t === 'cam') return $('#camFile').click();
+    if (appReady) render();
+    scrollTo(0, 0);
+  };
+}
 function render() {
   if ($('#screen').hidden && !splashOn) return;
   const low = st.items.filter(isLow).length + (isManager() ? openReqs().length : 0);
   const tabs = [['stock', '📦', '재고'], ['low', '🚨', isManager() ? '발주' : '부족'], ...(canInvoice() ? [['cam', '📷', '명세서']] : []), ...(canPrice() ? [['in', '🧾', '매입']] : []), ['log', '🕘', '이력'], ...(!canPrice() ? [['staff', '👤', '내 정보']] : [])];
-  $('#tabsIn').style.gridTemplateColumns = `repeat(${tabs.length},1fr)`;
-  $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${k === 'cam' ? 'cam' : ''} ${st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
-  $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (!b) return; if (splashOn) endSplash(); if (b.dataset.t === 'cam') return $('#camFile').click(); st.tab = b.dataset.t; render(); scrollTo(0, 0); };
+  if (!tabs.some(([k]) => k === st.tab)) st.tab = 'stock';
+  drawTabs(tabs, low);
+  try { localStorage.setItem('sobumo.tabs', JSON.stringify(tabs)); } catch (e) {}
 
   const keepFocus = document.activeElement?.id === 'q';
   const top = `<header class="top"><div class="top-in">
@@ -699,7 +724,7 @@ function readPerms(pre, root = document) { return { invoice: !!$(`#${pre}Inv`, r
 (function camInput() {
   const f = document.createElement('input');
   f.type = 'file'; f.accept = 'image/*'; f.id = 'camFile'; f.hidden = true;
-  f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) runInvoice(file); };
+  f.onchange = async () => { const file = f.files[0]; f.value = ''; if (!file) return; if (!appReady) toast('준비 중이에요…'); await appReadyP; if (!canInvoice()) return toast('명세서 입고 권한이 없어요'); runInvoice(file); };
   document.body.appendChild(f);
 })();
 
