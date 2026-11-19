@@ -339,7 +339,7 @@ function memberRow(m, canEdit) {
   return `<div class="mem ${m.status === 'left' ? 'left' : ''}" style="margin-top:6px">
     <div class="av">${esc((m.name || '?').slice(0, 1))}</div>
     <div class="nm"><b>${esc(m.name)}</b><span class="role ${m.role}">${ROLE_SHORT[m.role]}</span>
-      <small>${esc(m.title || '')}${m.title ? ' · ' : ''}${m.status === 'left' ? '퇴사' : m.joinedAt ? `${m.joinedAt.getFullYear()}.${m.joinedAt.getMonth() + 1}.${m.joinedAt.getDate()} 등록` : ''}</small></div>
+      <small>${m.role === 'staff' && m.status === 'active' ? `${m.perms?.invoice ? '📷' : ''}${m.perms?.price ? '💰' : '🔒금액 숨김'} · ` : ''}${esc(m.title || '')}${m.title ? ' · ' : ''}${m.status === 'left' ? '퇴사' : m.joinedAt ? `${m.joinedAt.getFullYear()}.${m.joinedAt.getMonth() + 1}.${m.joinedAt.getDate()} 등록` : ''}</small></div>
     ${canEdit && m.role !== 'owner' ? `<button class="btn" style="min-height:38px;padding:0 14px;font-size:.84rem" data-mem="${m.uid}">관리</button>` : ''}</div>`;
 }
 
@@ -364,7 +364,8 @@ function staffView() {
   <div class="card" style="font-size:.84rem;line-height:1.8;color:var(--mid)">
     <b style="color:var(--ink)">원장·최고관리자</b> 전체 조회, 직원 초대·권한·퇴사 처리<br>
     <b style="color:var(--ink)">사무장·행정</b> 품목 등록·수정·삭제, 최소 수량 설정, 재고 수정<br>
-    <b style="color:var(--ink)">간호사·직원</b> 재고 검색, 수량 수정, 부족 확인, 이력 조회
+    <b style="color:var(--ink)">간호사·직원</b> 재고 검색, 수량 수정, 부족 확인, 발주 요청, 이력 조회<br>
+    <span style="font-size:.8rem">└ 직원마다 📷 명세서 입고, 💰 금액 보기를 따로 켜고 끌 수 있어요. 금액 보기가 꺼진 직원에게는 매입 금액이 전혀 보이지 않아요.</span>
   </div>
   ${meBlock()}`;
 }
@@ -576,7 +577,8 @@ function invoiceSheet(v, fresh) {
     ${fresh ? '<p style="font-weight:900;color:var(--green);margin-bottom:6px">✓ 입고 완료</p>' : ''}
     <h3>${esc(canonSup(v.supplier))}${isManager() && v.status !== 'undone' ? ' <button class="s-link" id="vfix" style="display:inline;margin:0 0 0 6px;font-size:.78rem">✏️ 이름 고치기</button>' : ''}</h3>
     <p class="s-sub">${esc(v.date || '')} · ${v.lines.length}품목${canPrice() ? ' · 합계 ' + won(v.total) : ''}${undone ? ' · <b style="color:var(--red)">취소됨</b>' : ''}${v.editedBy ? ` · ✏️ ${esc(v.editedBy)} 수정` : ''}</p>
-    ${v.lowCount && !undone ? `<p class="notice" style="margin-top:12px">노란 줄 ${v.lowCount}개는 AI가 확신하지 못한 부분이에요. 맞는지 한 번 봐 주세요. 틀렸으면 아래 [✏️ 수정]으로 고치면 재고까지 같이 맞춰져요.</p>` : ''}
+    ${!canPrice() ? '<p class="perm-note" style="margin-top:10px">🔒 금액은 병원 설정에 따라 표시되지 않아요. 품목과 수량만 확인해 주세요.</p>' : ''}
+    ${v.lowCount && !undone ? `<p class="notice" style="margin-top:12px">노란 줄 ${v.lowCount}개는 AI가 확신하지 못한 부분이에요. 맞는지 한 번 봐 주세요. ${isManager() ? '틀렸으면 아래 [✏️ 수정]으로 고치면 재고까지 같이 맞춰져요.' : '틀렸으면 사무장님께 알려 주세요. 수량은 재고 탭에서 바로 고칠 수도 있어요.'}</p>` : ''}
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${v.lines.map((l) => `
       <div class="inv-line ${l.confidence === 'low' ? 'low' : ''}">
         <div style="flex:1;min-width:0"><b>${esc(l.itemName || l.name)}</b>${l.isNew ? '<span class="tag" style="background:#E8EEF8;color:var(--blue-d)">새 품목</span>' : ''}
@@ -658,7 +660,8 @@ function fixSupplierSheet(wrong) {
 function permBoxes(pre, p) {
   return `<p class="s-sub" style="font-size:.8rem;margin-bottom:4px">간호사·직원 권한일 때만 적용 (사무장은 항상 전부 가능)</p>
   <label class="perm"><input type="checkbox" id="${pre}Inv" ${p.invoice ? 'checked' : ''}> 📷 거래명세서 찍어서 입고하기</label>
-  <label class="perm"><input type="checkbox" id="${pre}Price" ${p.price ? 'checked' : ''}> 💰 단가·금액·매입 합계 보기</label>`;
+  <label class="perm"><input type="checkbox" id="${pre}Price" ${p.price ? 'checked' : ''}> 💰 단가·금액·매입 합계 보기</label>
+  <p class="perm-note">🔒 금액 보기를 끄면 이 직원 화면에는 <b>단가·금액·매입 합계·매입 탭이 아예 나오지 않아요.</b> 명세서를 찍어도 품목과 수량만 보입니다. 데이터 자체를 읽을 수 없게 막혀 있어서 안심하셔도 됩니다.</p>`;
 }
 function readPerms(pre, root = document) { return { invoice: !!$(`#${pre}Inv`, root)?.checked, price: !!$(`#${pre}Price`, root)?.checked }; }
 
