@@ -1,8 +1,15 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.sobumo.twa",
-    "sha256_cert_fingerprints": ["50:58:CA:39:76:B7:7E:40:23:ED:12:7D:29:A1:72:C1:BC:A5:BB:DD:77:A3:A8:5B:F4:45:09:F6:18:2D:74:6C"]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sobumo.twa",
+      "sha256_cert_fingerprints": [
+        "50:58:CA:39:76:B7:7E:40:23:ED:12:7D:29:A1:72:C1:BC:A5:BB:DD:77:A3:A8:5B:F4:45:09:F6:18:2D:74:6C",
+        "56:DE:76:93:4A:8A:17:AC:DF:92:2D:E6:69:71:0E:3E:E2:33:A9:A7:29:5B:C7:77:CE:6C:C9:7F:4B:E5:21:D9"
+      ]
+    }
   }
-}]
+]
