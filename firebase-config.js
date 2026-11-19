@@ -1,13 +1,10 @@
-// Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹) → "SDK 설정 및 구성"의 firebaseConfig 값을 아래에 붙여넣으세요.
-// (이 값들은 공개되어도 되는 값입니다. 실제 보안은 firestore.rules가 담당합니다.)
-export const firebaseConfig = null;
-/* 예시
+// Firebase 웹 앱 설정값 (공개되어도 되는 값입니다. 실제 보안은 firestore.rules가 담당합니다.)
+// 프로젝트: sobumo-8d0c6 (k.no1.realtor@gmail.com)
 export const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "sobumo-xxxx.firebaseapp.com",
-  projectId: "sobumo-xxxx",
-  storageBucket: "sobumo-xxxx.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:xxxxxxxx"
+  apiKey: "AIzaSyAzoJq7vElNw0gNUPaMFqlJw9_n65hfR3w",
+  authDomain: "sobumo-8d0c6.firebaseapp.com",
+  projectId: "sobumo-8d0c6",
+  storageBucket: "sobumo-8d0c6.firebasestorage.app",
+  messagingSenderId: "835844408409",
+  appId: "1:835844408409:web:5209d28e775d41e09a5d48"
 };
-*/
