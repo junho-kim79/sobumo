@@ -129,6 +129,45 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // 도매상 연락처
+      match /suppliers/{id} {
+        allow read: if isMember(h);
+        allow create, update: if isManager(h) && strLen(request.resource.data.name, 1, 60);
+        allow delete: if isManager(h);
+      }
+
+      // 직원 발주 요청: 누구나 요청, 처리(완료/취소)는 사무장·원장
+      match /requests/{id} {
+        allow read: if isMember(h);
+        allow create: if isMember(h)
+          && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.status == 'open';
+        allow update: if isManager(h)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'doneAt', 'doneBy']);
+        allow delete: if false;
+      }
+
+      // 발주 기록
+      match /orders/{id} {
+        allow read: if isMember(h);
+        allow create: if isManager(h)
+          && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.at == request.time;
+        allow update: if isManager(h)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        allow delete: if false;
+      }
+
+      // 월별 도매상 결제 표시 (문서 id = YYYY-MM_도매상명)
+      match /payments/{id} {
+        allow read: if isMember(h);
+        allow create, update: if isManager(h)
+          && request.resource.data.byUid == request.auth.uid
+          && request.resource.data.at == request.time;
+        allow delete: if false;
+      }
+
       // 변경 이력: 추가만 가능
       match /logs/{id} {
         allow read: if isMember(h);

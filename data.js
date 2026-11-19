@@ -212,6 +212,27 @@ async function firebaseApi() {
       return onSnapshot(query(C(hid, 'invoices'), orderBy('at', 'desc'), limit(200)), (s) =>
         cb(s.docs.map((d) => ({ ...withId(d), at: ts(d.data().at) || new Date() }))), () => cb([]));
     },
+    // ── 범용: 도매상(suppliers)·발주요청(requests)·발주(orders)·결제(payments) ──
+    watchCol(hid, name, cb) {
+      return onSnapshot(C(hid, name), (s) => cb(s.docs.map((d) => { const x = withId(d); if (x.at) x.at = ts(x.at); return x; })), () => cb([]));
+    },
+    async addTo(hid, name, data) {
+      const ref = doc(C(hid, name));
+      const b = writeBatch(db);
+      b.set(ref, { ...data, byUid: me.uid, at: serverTimestamp() });
+      await b.commit();
+      return ref.id;
+    },
+    async setIn(hid, name, id, data) {
+      const b = writeBatch(db);
+      b.set(H(hid, name, id), { ...data, byUid: me.uid, at: serverTimestamp() }, { merge: true });
+      await b.commit();
+    },
+    async updateIn(hid, name, id, fields) {
+      const b = writeBatch(db);
+      b.update(H(hid, name, id), fields);
+      await b.commit();
+    },
     async updateMember(hid, uid, fields) {
       const b = writeBatch(db);
       if (fields.status === 'left') fields.leftAt = serverTimestamp();
@@ -239,15 +260,22 @@ function demoApi() {
       ['주사기 3cc', '23G · BD', '개', 70, 50], ['주사기 5cc', '23G', '개', 120, 50], ['수액세트', '일반', '개', 18, 20],
       ['멸균거즈', '4x4 · 10매', '팩', 240, 100], ['알코올솜', '100매', '통', 6, 5], ['라텍스 장갑', 'M', '박스', 3, 5],
       ['라텍스 장갑', 'S', '박스', 0, 3], ['IV 카테터', '22G', '개', 45, 30], ['반창고', '실크 1인치', '롤', 12, 10], ['생리식염수', '100ml', '병', 32, 20],
-    ].map(([name, spec, unit, qty, minQty], i) => ({ id: 'i' + i, name, spec, unit, qty, minQty, archived: false, ...(i === 0 ? { packQty: 100, packUnit: '박스' } : {}) })),
+    ].map(([name, spec, unit, qty, minQty], i) => ({ id: 'i' + i, name, spec, unit, qty, minQty, archived: false, ...(i === 0 ? { packQty: 100, packUnit: '박스' } : {}), supplierId: i % 3 === 1 ? 's2' : 's1' })),
     logs: [],
     invites: [],
     invoices: [],
+    suppliers: [
+      { id: 's1', name: '대구메디칼', phone: '053-000-0000', contact: '김과장', memo: '오후 3시 전 주문 시 당일 배송' },
+      { id: 's2', name: '영남의료기', phone: '010-0000-0000', contact: '박대리', memo: '' },
+    ],
+    requests: [],
+    orders: [],
+    payments: [],
   };
   const L = (i, b, a, by, ago, type = 'set') => S.logs.push({ id: 'l' + S.logs.length, itemId: 'i' + i, itemName: S.items[i].name + ' ' + S.items[i].spec, before: b, after: a, delta: a - b, type, byName: by, at: new Date(now - ago * min) });
   L(0, 100, 70, '이간호', 3); L(5, 5, 3, '최간호', 25, 'delta'); L(6, 2, 0, '이간호', 70, 'delta'); L(3, 140, 240, '박사무장', 180, 'delta'); L(2, 20, 18, '최간호', 60 * 26);
   S.logs.sort((a, b) => b.at - a.at);
-  const subs = { items: [], logs: [], members: [], invites: [], invoices: [] };
+  const subs = { items: [], logs: [], members: [], invites: [], invoices: [], suppliers: [], requests: [], orders: [], payments: [] };
   const emit = (k) => subs[k].forEach((cb) => cb(k === 'items' ? S.items.filter((x) => !x.archived).map((x) => ({ ...x })) : S[k].slice()));
   const watch = (k) => (hid, cb) => { subs[k].push(cb); setTimeout(() => emit(k)); return () => {}; };
   const addLog = (it, before, after, type, myName, memo = '') => { S.logs.unshift({ id: 'l' + Math.random(), itemId: it.id, itemName: it.name + (it.spec ? ' ' + it.spec : ''), before, after, delta: after - before, type, memo, byName: myName, at: new Date() }); emit('logs'); };
@@ -296,6 +324,10 @@ function demoApi() {
       const r = S.invoices.find((x) => x.id === inv.id); r.status = 'undone'; emit('items'); emit('invoices');
     },
     async updateMember(hid, uid, f) { Object.assign(S.members.find((m) => m.uid === uid), f); emit('members'); },
+    watchCol(hid, name, cb) { (subs[name] ||= []).push(cb); setTimeout(() => cb((S[name] ||= []).slice())); return () => {}; },
+    async addTo(hid, name, data) { const id = 'd' + Math.random(); (S[name] ||= []).unshift({ id, ...data, byUid: me.uid, at: new Date() }); (subs[name] || []).forEach((cb) => cb(S[name].slice())); return id; },
+    async setIn(hid, name, id, data) { const arr = (S[name] ||= []); const i = arr.findIndex((x) => x.id === id); const v = { ...(i >= 0 ? arr[i] : {}), id, ...data, at: new Date() }; if (i >= 0) arr[i] = v; else arr.unshift(v); (subs[name] || []).forEach((cb) => cb(arr.slice())); },
+    async updateIn(hid, name, id, f) { Object.assign((S[name] || []).find((x) => x.id === id) || {}, f); (subs[name] || []).forEach((cb) => cb(S[name].slice())); },
   };
 }
 

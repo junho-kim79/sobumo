@@ -7,7 +7,7 @@ const ROLE_SHORT = { owner: '원장', manager: '사무장', staff: '직원' };
 const fmt = (n) => Number(n || 0).toLocaleString('ko-KR');
 
 let api, user, hid, hospital, member;
-const st = { items: [], logs: [], members: [], invites: [], invoices: [], tab: 'stock', q: '', flash: new Set() };
+const st = { items: [], logs: [], members: [], invites: [], invoices: [], suppliers: [], requests: [], orders: [], payments: [], month: '', tab: 'stock', q: '', flash: new Set() };
 
 function toast(msg) {
   document.querySelectorAll('.toast').forEach((t) => t.remove());
@@ -151,14 +151,18 @@ function startApp() {
     render();
   });
   if (isManager()) api.watchInvoices(hid, (v) => { st.invoices = v; if (st.tab === 'in') render(); });
+  const reRender = (k) => (v) => { st[k] = v; render(); };
+  api.watchCol(hid, 'suppliers', reRender('suppliers'));
+  api.watchCol(hid, 'requests', reRender('requests'));
+  if (isManager()) { api.watchCol(hid, 'orders', reRender('orders')); api.watchCol(hid, 'payments', reRender('payments')); }
   if (member.role === 'owner') api.watchInvites(hid, (v) => { st.invites = v; if (st.tab === 'staff') render(); });
   render();
 }
 
 function render() {
   if ($('#screen').hidden) return;
-  const low = st.items.filter(isLow).length;
-  const tabs = [['stock', '📦', '재고'], ['low', '🚨', '부족'], ...(isManager() ? [['in', '🧾', '입고']] : []), ['log', '🕘', '이력'], ['staff', member.role === 'owner' ? '👥' : '👤', member.role === 'owner' ? '직원' : '내 정보']];
+  const low = st.items.filter(isLow).length + (isManager() ? openReqs().length : 0);
+  const tabs = [['stock', '📦', '재고'], ['low', '🚨', isManager() ? '발주' : '부족'], ...(isManager() ? [['in', '🧾', '입고']] : []), ['log', '🕘', '이력'], ['staff', member.role === 'owner' ? '👥' : '👤', member.role === 'owner' ? '직원' : '내 정보']];
   $('#tabsIn').style.gridTemplateColumns = `repeat(${tabs.length},1fr)`;
   $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
   $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (b) { st.tab = b.dataset.t; render(); scrollTo(0, 0); } };
@@ -191,11 +195,111 @@ function stockView() {
   <div class="list">${list.map(itemRow).join('') || `<div class="empty">${st.items.length ? '검색 결과가 없어요' : isManager() ? '아직 등록된 품목이 없어요.<br>아래 <b>＋ 품목 추가</b>로 시작하세요.' : '아직 등록된 품목이 없어요.<br>사무장님이나 원장님이 품목을 등록하면 여기에 보여요.'}`}</div>`;
 }
 
+function openReqs() { return st.requests.filter((r) => r.status === 'open'); }
+const supName = (id) => st.suppliers.find((x) => x.id === id)?.name || '';
+function suggestQty(it) { return Math.max(it.minQty * 2 - it.qty, it.minQty || 1, 1); }
+
 function lowView() {
   const list = st.items.filter(isLow).sort((a, b) => a.qty / (a.minQty || 1) - b.qty / (b.minQty || 1));
-  return `<p class="sec-t" style="margin-top:4px">최소 수량 이하인 품목 · 많이 모자란 순</p>
-  <div class="list">${list.map(itemRow).join('') || '<div class="empty">👍 부족한 품목이 없어요</div>'}</div>
-  ${list.length ? '<p class="lead" style="text-align:center;margin-top:16px;font-size:.8rem">통합 발주 기능은 다음 단계에서 추가됩니다</p>' : ''}`;
+  const reqs = openReqs();
+  if (!isManager()) {
+    const mine = reqs.filter((r) => r.byUid === user.uid);
+    return `<p class="sec-t" style="margin-top:4px">최소 수량 이하인 품목 · 눌러서 수량 수정이나 발주 요청</p>
+    <div class="list">${list.map(itemRow).join('') || '<div class="empty">👍 부족한 품목이 없어요</div>'}</div>
+    ${mine.length ? `<p class="sec-t">내가 보낸 발주 요청 ${mine.length}건 · 사무장님 확인 대기</p>${mine.map(reqRow).join('')}` : ''}`;
+  }
+  // 사무장·원장: 요청 + 도매상별 발주 묶음
+  const reqIds = new Set(reqs.map((r) => r.itemId));
+  const need = new Map();
+  list.forEach((it) => need.set(it.id, it));
+  reqs.forEach((r) => { const it = st.items.find((x) => x.id === r.itemId); if (it) need.set(it.id, it); });
+  const groups = {};
+  need.forEach((it) => { const k = it.supplierId && supName(it.supplierId) ? it.supplierId : ''; (groups[k] ||= []).push(it); });
+  const keys = Object.keys(groups).sort((a, b) => (a === '') - (b === '') || supName(a).localeCompare(supName(b), 'ko'));
+  return `
+  ${reqs.length ? `<p class="sec-t" style="margin-top:4px">직원 발주 요청 ${reqs.length}건</p>${reqs.map(reqRow).join('')}` : ''}
+  <div class="row" style="margin:${reqs.length ? '20px' : '4px'} 2px 8px;align-items:center"><p class="sec-t" style="margin:0">도매상별 발주 목록</p><button class="btn" style="flex:none;min-height:36px;padding:0 14px;font-size:.82rem" id="supMgr">🏪 도매상 관리</button></div>
+  ${keys.length ? keys.map((k) => orderGroup(k, groups[k], reqIds)).join('') : '<div class="empty">👍 발주할 품목이 없어요</div>'}
+  ${st.orders.length ? `<p class="sec-t">최근 발주</p>${st.orders.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 10).map((o) => `<div class="log" style="margin-top:6px"><div class="ic">📦</div><div class="tx"><b>${esc(o.supplierName || '도매상 미지정')}</b> · ${o.lines.length}품목<small>${esc(o.byName || '')} · ${o.at ? ago(o.at) : ''}</small></div></div>`).join('')}` : ''}`;
+}
+function reqRow(r) {
+  return `<div class="log" style="margin-top:6px"><div class="ic">📮</div><div class="tx"><b>${esc(r.itemName)}</b>${r.qty ? ` · ${fmt(r.qty)}${esc(r.unit || '')}` : ''}${r.memo ? ` <span style="color:var(--mid)">· ${esc(r.memo)}</span>` : ''}<small>${esc(r.byName)} 요청 · ${r.at ? ago(r.at) : ''}</small></div>${isManager() ? `<button class="btn" style="flex:none;min-height:34px;padding:0 12px;font-size:.78rem" data-reqdone="${r.id}">처리</button>` : ''}</div>`;
+}
+function orderGroup(k, items, reqIds) {
+  const sup = st.suppliers.find((x) => x.id === k);
+  return `<div class="card order-g" data-g="${k}" style="margin-top:10px;padding:14px">
+    <div class="row" style="align-items:center"><div><b style="font-size:1.02rem">${sup ? esc(sup.name) : '도매상 미지정'}</b>${sup?.contact || sup?.phone ? `<div style="font-size:.78rem;color:var(--mute)">${esc(sup.contact || '')} ${esc(sup.phone || '')}</div>` : ''}${sup?.memo ? `<div style="font-size:.76rem;color:var(--mid)">${esc(sup.memo)}</div>` : ''}</div></div>
+    ${!sup ? '<p class="s-sub" style="font-size:.78rem;margin-top:4px">품목을 눌러 [품목 정보 수정]에서 거래 도매상을 정해 두면 여기서 묶여요</p>' : ''}
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">${items.map((it) => `
+      <label class="inv-line" style="cursor:pointer"><input type="checkbox" checked data-oi="${it.id}" style="width:20px;height:20px;flex:none">
+        <div style="flex:1;min-width:0"><b>${esc(it.name)}</b>${reqIds.has(it.id) ? '<span class="tag" style="background:#E8EEF8;color:var(--blue-d)">요청</span>' : ''}<small>${esc(it.spec || '')} · 지금 ${fmt(it.qty)} / 최소 ${fmt(it.minQty)}</small></div>
+        <input type="number" inputmode="numeric" min="1" class="in" data-oq="${it.id}" value="${suggestQty(it)}" style="width:76px;min-height:38px;text-align:right;padding:0 8px;flex:none"><span style="flex:none;font-size:.8rem;color:var(--mid)">${esc(it.unit || '')}</span>
+      </label>`).join('')}</div>
+    <div class="s-actions" style="margin-top:12px">
+      <button class="btn" data-ocopy="${k}">📋 발주 문자 복사</button>
+      ${sup?.phone ? `<button class="btn blue" data-osms="${k}">💬 문자 보내기</button>` : ''}
+    </div>
+  </div>`;
+}
+function orderText(k) {
+  const g = document.querySelector(`.order-g[data-g="${k}"]`);
+  const lines = [...g.querySelectorAll('[data-oi]')].filter((c) => c.checked).map((c) => {
+    const it = st.items.find((x) => x.id === c.dataset.oi);
+    const q = Math.max(1, parseInt(g.querySelector(`[data-oq="${it.id}"]`).value || '1', 10));
+    return { itemId: it.id, name: it.name + (it.spec ? ' ' + it.spec : ''), qty: q, unit: it.unit || '' };
+  });
+  const text = `[${hospital.name}] 발주 요청드립니다.\n${lines.map((l) => `- ${l.name} ${fmt(l.qty)}${l.unit}`).join('\n')}\n감사합니다.`;
+  return { lines, text };
+}
+async function recordOrder(k, lines) {
+  const sup = st.suppliers.find((x) => x.id === k);
+  await api.addTo(hid, 'orders', { supplierId: k, supplierName: sup?.name || '', lines, byName: member.name, status: 'ordered' });
+  const ids = new Set(lines.map((l) => l.itemId));
+  for (const r of openReqs().filter((r) => ids.has(r.itemId))) await api.updateIn(hid, 'requests', r.id, { status: 'done', doneBy: user.uid });
+}
+function bindOrder() {
+  const sm = $('#supMgr'); if (sm) sm.onclick = () => supplierSheet();
+  document.querySelectorAll('[data-reqdone]').forEach((b) => (b.onclick = async () => { try { await api.updateIn(hid, 'requests', b.dataset.reqdone, { status: 'done', doneBy: user.uid }); toast('처리했어요'); } catch (e) { toast(errMsg(e)); } }));
+  document.querySelectorAll('[data-ocopy]').forEach((b) => (b.onclick = async () => {
+    const { lines, text } = orderText(b.dataset.ocopy); if (!lines.length) return toast('발주할 품목을 골라 주세요');
+    try { await navigator.clipboard.writeText(text); } catch { return sheet(`<h3>발주 문자</h3><div class="link-box" style="white-space:pre-wrap">${esc(text)}</div><p class="s-sub" style="margin-top:8px">길게 눌러 복사해 주세요</p>`); }
+    try { await recordOrder(b.dataset.ocopy, lines); toast('발주 문자를 복사했어요 · 발주 기록 저장'); } catch (e) { toast(errMsg(e)); }
+  }));
+  document.querySelectorAll('[data-osms]').forEach((b) => (b.onclick = async () => {
+    const k = b.dataset.osms, sup = st.suppliers.find((x) => x.id === k);
+    const { lines, text } = orderText(k); if (!lines.length) return toast('발주할 품목을 골라 주세요');
+    try { await recordOrder(k, lines); } catch (e) { return toast(errMsg(e)); }
+    location.href = `sms:${(sup.phone || '').replace(/[^\d+]/g, '')}?&body=${encodeURIComponent(text)}`;
+  }));
+}
+function requestSheet(it) {
+  const d = sheet(`<h3>발주 요청</h3><p class="s-sub">${esc(it.name)} ${esc(it.spec || '')} · 지금 ${fmt(it.qty)}${esc(it.unit || '')}</p>
+    <label class="f">필요한 수량 (선택)</label><input class="in" id="rq" type="number" inputmode="numeric" min="0" value="${suggestQty(it)}">
+    <label class="f">메모 (선택)</label><input class="in" id="rm" maxlength="60" placeholder="예: 다음 주 시술 많아요">
+    <div class="s-actions"><button class="btn" id="rc">닫기</button><button class="btn blue" id="rs">요청 보내기</button></div>`);
+  $('#rc', d).onclick = () => d.remove();
+  $('#rs', d).onclick = async (e) => {
+    e.target.disabled = true;
+    try { await api.addTo(hid, 'requests', { itemId: it.id, itemName: it.name + (it.spec ? ' ' + it.spec : ''), unit: it.unit || '', qty: parseInt($('#rq', d).value || '0', 10) || 0, memo: $('#rm', d).value.trim(), byName: member.name, status: 'open' }); d.remove(); toast('사무장님께 발주 요청을 보냈어요'); }
+    catch (err) { toast(errMsg(err)); e.target.disabled = false; }
+  };
+}
+function supplierSheet(edit) {
+  const d = sheet(`<h3>🏪 도매상 관리</h3>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">${st.suppliers.map((x) => `<div class="inv-line"><div style="flex:1"><b>${esc(x.name)}</b><small>${esc(x.contact || '')} ${esc(x.phone || '')}${x.memo ? ' · ' + esc(x.memo) : ''}</small></div><button class="btn" style="flex:none;min-height:34px;padding:0 12px;font-size:.78rem" data-sedit="${x.id}">수정</button></div>`).join('') || '<p class="s-sub">아직 등록된 도매상이 없어요</p>'}</div>
+    <p class="sec-t">${edit ? '도매상 수정' : '도매상 추가'}</p>
+    <input class="in" id="sn" maxlength="60" placeholder="상호 (예: 대구메디칼)" value="${esc(edit?.name || '')}">
+    <div class="row" style="margin-top:8px"><input class="in" id="sc" maxlength="20" placeholder="담당자" value="${esc(edit?.contact || '')}"><input class="in" id="sp" maxlength="20" inputmode="tel" placeholder="전화번호" value="${esc(edit?.phone || '')}"></div>
+    <input class="in" id="sm" style="margin-top:8px" maxlength="80" placeholder="메모 (예: 오후 3시 전 주문 시 당일 배송)" value="${esc(edit?.memo || '')}">
+    <div class="s-actions"><button class="btn" id="sx">닫기</button><button class="btn blue" id="ss">${edit ? '저장' : '추가'}</button></div>`);
+  $('#sx', d).onclick = () => d.remove();
+  d.querySelectorAll('[data-sedit]').forEach((b) => (b.onclick = () => { d.remove(); supplierSheet(st.suppliers.find((x) => x.id === b.dataset.sedit)); }));
+  $('#ss', d).onclick = async () => {
+    const f = { name: $('#sn', d).value.trim(), contact: $('#sc', d).value.trim(), phone: $('#sp', d).value.trim(), memo: $('#sm', d).value.trim() };
+    if (!f.name) return toast('상호를 입력해 주세요');
+    try { if (edit) await api.setIn(hid, 'suppliers', edit.id, f); else await api.addTo(hid, 'suppliers', f); d.remove(); toast('저장했어요'); supplierSheet(); }
+    catch (e) { toast(errMsg(e)); }
+  };
 }
 
 function logView() {
@@ -269,6 +373,7 @@ function bind() {
   document.querySelectorAll('.item').forEach((b) => (b.onclick = () => qtySheet(st.items.find((x) => x.id === b.dataset.id))));
   const add = $('#add'); if (add) add.onclick = () => itemSheet();
   bindIn();
+  bindOrder();
   const out = $('#out'); if (out) out.onclick = () => api.signOut();
   const ms = $('#meSave'); if (ms) ms.onclick = async () => {
     const name = $('#meName').value.trim(); if (!name) return toast('이름을 입력해 주세요');
@@ -303,7 +408,9 @@ function qtySheet(it) {
     <div class="qbtns"><button class="m" data-d="-10">−10</button><button class="m" data-d="-1">−1</button><button class="p" data-d="1">+1</button><button class="p" data-d="10">+10</button></div>
     <input class="in" id="qm" style="margin-top:12px" maxlength="60" placeholder="메모 (선택) 예: 시술 사용, 파손">
     <div class="s-actions"><button class="btn" id="qc">닫기</button><button class="btn blue" id="qs">저장</button></div>
-    ${isManager() ? '<button class="s-link" id="qe">품목 정보 수정 · 삭제</button>' : ''}`);
+    <button class="s-link" id="qr">📮 이 품목 발주 요청하기</button>
+    ${isManager() ? '<button class="s-link" id="qe" style="margin-top:6px">품목 정보 수정 · 삭제</button>' : ''}`);
+  $('#qr', d).onclick = () => { d.remove(); requestSheet(it); };
   const v = $('#qv', d), qd = $('#qd', d);
   const upd = () => {
     const n = Math.max(0, parseInt(v.value || '0', 10)); const diff = n - it.qty;
@@ -339,6 +446,8 @@ function itemSheet(it) {
     </div>
     <label class="f">박스 환산 (거래명세서 자동 입고에 사용 · 선택)</label>
     <div class="row" style="align-items:center;gap:6px"><span style="flex:none;font-weight:800">1</span><input class="in" id="iPU" maxlength="10" value="${esc(it?.packUnit || '')}" placeholder="박스"><span style="flex:none;font-weight:800">=</span><input class="in" id="iPQ" type="number" inputmode="numeric" min="0" value="${it?.packQty || ''}" placeholder="100"><span style="flex:none;color:var(--mid)" id="iPUu">${esc(it?.unit || '개')}</span></div>
+    <label class="f">거래 도매상 (발주 묶음에 사용)</label>
+    <select class="in" id="iSup"><option value="">미지정</option>${st.suppliers.map((x) => `<option value="${x.id}" ${it?.supplierId === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
     ${isNew ? '<label class="f">현재 수량</label><input class="in" id="iQ" type="number" inputmode="numeric" min="0" value="0">' : ''}
     <div class="s-actions"><button class="btn" id="ic">닫기</button><button class="btn blue" id="is">${isNew ? '추가' : '저장'}</button></div>
     ${isNew ? '' : '<button class="s-link" id="ix" style="color:var(--red)">이 품목 삭제 (기록은 보존)</button>'}`);
@@ -347,6 +456,7 @@ function itemSheet(it) {
     const f = { name: $('#iN', d).value.trim(), spec: $('#iS', d).value.trim(), unit: $('#iU', d).value.trim(), minQty: Math.max(0, parseInt($('#iM', d).value || '0', 10)) };
     const pq = parseInt($('#iPQ', d).value || '0', 10), pu = $('#iPU', d).value.trim();
     if (pq > 0 && pu) { f.packQty = pq; f.packUnit = pu; } else if (!isNew) { f.packQty = 0; f.packUnit = ''; }
+    f.supplierId = $('#iSup', d).value;
     if (!f.name) return toast('품목명을 입력해 주세요');
     e.target.disabled = true;
     try {
@@ -401,6 +511,7 @@ function inView() {
     <label class="cta" style="width:100%;cursor:pointer">📷 명세서 찍기 / 사진 고르기<input type="file" accept="image/*" id="invFile" hidden></label>
   </div>
   <div class="sum" style="margin-top:12px"><div><small>이번 달 매입</small><b>${won(monthTotal())}</b></div><div><small>지난달 매입</small><b>${won(monthTotal(-1))}</b></div><div><small>이번 달 명세서</small><b>${st.invoices.filter((v) => v.status === 'in' && v.at.getMonth() === new Date().getMonth() && v.at.getFullYear() === new Date().getFullYear()).length}건</b></div></div>
+  ${monthBlock()}
   <p class="sec-t">최근 입고</p>
   <div class="list inv-list">${list.map((v) => `<button class="item inv ${v.status === 'undone' ? 'undone' : ''}" data-inv="${v.id}">
     <div class="nm"><b>${esc(v.supplier || '거래처 미확인')}${v.status === 'undone' ? '<span class="tag" style="background:#EEF0F2;color:var(--mid)">취소됨</span>' : v.lowCount ? `<span class="tag low">확인 ${v.lowCount}</span>` : ''}</b><small>${esc(v.date || '')} · ${v.lines.length}품목 · ${esc(v.byName || '')}</small></div>
@@ -465,3 +576,32 @@ function invoiceSheet(v, fresh) {
     try { await api.undoInvoice(hid, v, member.name); d.remove(); toast('입고를 되돌렸어요'); } catch (e) { toast(e.message || errMsg(e)); vu.disabled = false; }
   };
 }
+
+/* ── 월별 매입·결제 ── */
+const payId = (ym, k) => `${ym}_${k.replace(/[\/.#$\[\]]/g, '_')}`.slice(0, 200);
+const ymOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+function monthBlock() {
+  const months = [...new Set([ymOf(new Date()), ...st.invoices.map((v) => ymOf(v.at))])].sort().reverse();
+  const ym = st.month && months.includes(st.month) ? st.month : months[0];
+  const rows = {};
+  st.invoices.filter((v) => v.status === 'in' && ymOf(v.at) === ym).forEach((v) => {
+    const k = (v.supplier || '거래처 미확인').trim();
+    (rows[k] ||= { total: 0, n: 0 }); rows[k].total += v.total || 0; rows[k].n++;
+  });
+  const names = Object.keys(rows).sort((a, b) => rows[b].total - rows[a].total);
+  const paid = (k) => st.payments.find((p) => p.id === payId(ym, k))?.paid;
+  const sum = names.reduce((a, k) => a + rows[k].total, 0), unpaid = names.filter((k) => !paid(k)).reduce((a, k) => a + rows[k].total, 0);
+  return `<div class="row" style="margin:20px 2px 8px;align-items:center"><p class="sec-t" style="margin:0">월별 매입 · 결제</p>
+    <select class="in" id="ymSel" style="flex:none;width:auto;min-height:36px;padding:0 10px;font-size:.86rem">${months.map((m) => `<option ${m === ym ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+  <div class="card" style="padding:12px 14px">
+    ${names.length ? names.map((k) => `<label class="pay-row"><div style="flex:1;min-width:0"><b>${esc(k)}</b><small>${rows[k].n}건</small></div><b style="flex:none">${won(rows[k].total)}</b>
+      <span class="pay-chk ${paid(k) ? 'on' : ''}"><input type="checkbox" data-pay="${esc(k)}" data-ym="${ym}" ${paid(k) ? 'checked' : ''}> ${paid(k) ? '결제 완료' : '미결제'}</span></label>`).join('') : '<p class="s-sub" style="padding:8px 0">이 달 매입 기록이 없어요</p>'}
+    ${names.length ? `<div class="row" style="border-top:1px solid var(--line);margin-top:8px;padding-top:10px;font-size:.88rem"><span>합계 <b>${won(sum)}</b></span><span style="text-align:right;color:${unpaid ? 'var(--red)' : 'var(--green)'}">미결제 <b>${won(unpaid)}</b></span></div>` : ''}
+  </div>`;
+}
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'ymSel') { st.month = e.target.value; render(); return; }
+  const c = e.target.closest?.('[data-pay]'); if (!c) return;
+  try { await api.setIn(hid, 'payments', payId(c.dataset.ym, c.dataset.pay), { month: c.dataset.ym, supplier: c.dataset.pay, paid: c.checked }); toast(c.checked ? '결제 완료로 표시했어요' : '미결제로 바꿨어요'); }
+  catch (err) { toast(errMsg(err)); c.checked = !c.checked; }
+});
