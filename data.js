@@ -189,6 +189,28 @@ async function firebaseApi() {
         return { id: invRef.id, ...rec, at: new Date() };
       });
     },
+    // 반품: 고른 품목을 재고에서 빼고, 매입에서 차감될 기록(kind:'return', total은 음수)을 남김
+    async applyReturn(hid, ret, myName) {
+      return runTransaction(db, async (tx) => {
+        const sum = {};
+        ret.lines.forEach((l) => { sum[l.itemId] = (sum[l.itemId] || 0) + l.qty; });
+        const snaps = {};
+        for (const id of Object.keys(sum)) snaps[id] = await tx.get(H(hid, 'items', id));
+        const invRef = doc(C(hid, 'invoices'));
+        const lines = [];
+        for (const [id, n] of Object.entries(sum)) {
+          const s = snaps[id]; if (!s.exists()) throw new Error('품목이 없습니다');
+          const cur = s.data(), before = cur.qty, after = Math.max(0, before - n);
+          const log = doc(C(hid, 'logs'));
+          tx.set(log, { itemId: id, itemName: cur.name, before, after, delta: after - before, type: 'return', memo: [ret.supplier, '반품', ret.memo].filter(Boolean).join(' · '), invoiceId: invRef.id, byUid: me.uid, byName: myName, at: serverTimestamp() });
+          tx.update(H(hid, 'items', id), { qty: after, updatedAt: serverTimestamp(), updatedBy: me.uid, lastLogId: log.id });
+          lines.push({ itemId: id, itemName: cur.name, name: cur.name, spec: cur.spec || '', qty: n, unit: cur.unit || '', applied: after - before, amount: 0, isNew: false });
+        }
+        const rec = { kind: 'return', supplier: ret.supplier || '', date: ret.date || '', total: -Math.abs(ret.amount || 0), memo: ret.memo || '', lines, lowCount: 0, byUid: me.uid, byName: myName, at: serverTimestamp(), status: 'in' };
+        tx.set(invRef, rec);
+        return { id: invRef.id, ...rec, at: new Date() };
+      });
+    },
     async undoInvoice(hid, inv, myName) {
       return runTransaction(db, async (tx) => {
         const back = {};
@@ -202,7 +224,7 @@ async function firebaseApi() {
           const s = snaps[id]; if (!s.exists()) continue;
           const cur = s.data(), before = cur.qty, after = Math.max(0, before - n);
           const log = doc(C(hid, 'logs'));
-          tx.set(log, { itemId: id, itemName: cur.name, before, after, delta: after - before, type: 'undo', memo: (inv.supplier || '') + ' 입고 취소', invoiceId: inv.id, byUid: me.uid, byName: myName, at: serverTimestamp() });
+          tx.set(log, { itemId: id, itemName: cur.name, before, after, delta: after - before, type: 'undo', memo: (inv.supplier || '') + (inv.kind === 'return' ? ' 반품 취소' : ' 입고 취소'), invoiceId: inv.id, byUid: me.uid, byName: myName, at: serverTimestamp() });
           tx.update(H(hid, 'items', id), { qty: after, ...(isNew[id] && after === 0 ? { archived: true } : {}), updatedAt: serverTimestamp(), updatedBy: me.uid, lastLogId: log.id });
         }
         tx.update(H(hid, 'invoices', inv.id), { status: 'undone', undoneAt: serverTimestamp(), undoneBy: me.uid });
@@ -343,9 +365,15 @@ function demoApi() {
       upd.lines.forEach((l, i) => { const d = (l.applied || 0) - (r.lines[i]?.applied || 0); const it = S.items.find((x) => x.id === l.itemId); if (d && it) { const b = it.qty; it.qty = Math.max(0, b + d); addLog(it, b, it.qty, 'in', myName, upd.supplier + ' 명세서 수정'); } });
       Object.assign(r, upd, { lowCount: 0, editedBy: myName }); emit('items'); emit('invoices');
     },
+    async applyReturn(hid, ret, myName) {
+      const lines = [];
+      for (const l of ret.lines) { const it = S.items.find((x) => x.id === l.itemId); const b = it.qty; it.qty = Math.max(0, b - l.qty); addLog(it, b, it.qty, 'return', myName, [ret.supplier, '반품', ret.memo].filter(Boolean).join(' · ')); lines.push({ itemId: it.id, itemName: it.name, name: it.name, spec: it.spec || '', qty: l.qty, unit: it.unit || '', applied: it.qty - b, amount: 0 }); }
+      const rec = { id: 'r' + Math.random(), kind: 'return', supplier: ret.supplier, date: ret.date, total: -Math.abs(ret.amount || 0), memo: ret.memo || '', lines, lowCount: 0, byName: myName, at: new Date(), status: 'in' };
+      S.invoices.unshift(rec); emit('items'); emit('invoices'); return rec;
+    },
     async undoInvoice(hid, inv, myName) {
       const back = {}; inv.lines.forEach((l) => { back[l.itemId] = (back[l.itemId] || 0) + l.applied; });
-      for (const [iid, n] of Object.entries(back)) { const it = S.items.find((x) => x.id === iid); if (!it) continue; const b = it.qty; it.qty = Math.max(0, b - n); addLog(it, b, it.qty, 'undo', myName, inv.supplier + ' 입고 취소'); if (it.qty === 0 && inv.lines.some((l) => l.itemId === iid && l.isNew)) it.archived = true; }
+      for (const [iid, n] of Object.entries(back)) { const it = S.items.find((x) => x.id === iid); if (!it) continue; const b = it.qty; it.qty = Math.max(0, b - n); addLog(it, b, it.qty, 'undo', myName, inv.supplier + (inv.kind === 'return' ? ' 반품 취소' : ' 입고 취소')); if (it.qty === 0 && inv.lines.some((l) => l.itemId === iid && l.isNew)) it.archived = true; }
       const r = S.invoices.find((x) => x.id === inv.id); r.status = 'undone'; emit('items'); emit('invoices');
     },
     async updateMember(hid, uid, f) { Object.assign(S.members.find((m) => m.uid === uid), f); emit('members'); },

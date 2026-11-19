@@ -207,7 +207,7 @@ function stockView() {
   const low = st.items.filter(isLow).length;
   return `
   <div class="sum"><div><small>전체 품목</small><b>${st.items.length}</b></div><div class="warn"><small>부족 · 품절</small><b>${low}</b></div><div><small>오늘 변경</small><b>${st.logs.filter((l) => l.at > new Date(new Date().setHours(0, 0, 0, 0))).length}</b></div></div>
-  <div class="search"><input class="in" id="q" placeholder="품목 검색 (예: 주사기, 거즈)" value="${esc(st.q)}"></div>
+  <div class="search row" style="align-items:center"><input class="in" id="q" placeholder="품목 검색 (예: 주사기, 거즈)" value="${esc(st.q)}">${canInvoice() && st.items.length ? '<button class="btn" id="retBtn" style="flex:none;width:auto;padding:0 14px">↩️ 반품</button>' : ''}</div>
   <div class="list">${list.map(itemRow).join('') || `<div class="empty">${st.items.length ? '검색 결과가 없어요' : isManager() ? '아직 등록된 품목이 없어요.<br>아래 <b>＋ 품목 추가</b>로 시작하세요.' : '아직 등록된 품목이 없어요.<br>사무장님이나 원장님이 품목을 등록하면 여기에 보여요.'}`}</div>`;
 }
 
@@ -327,7 +327,7 @@ function logList() {
   for (const l of st.logs) {
     const d = l.at, day = `${d.getMonth() + 1}월 ${d.getDate()}일`;
     if (day !== lastDay) { out += `<div class="day">${day}</div>`; lastDay = day; }
-    const icon = { create: '🆕', meta: '✏️', archive: '🗑️', delta: '🔢', set: '✍️', in: '🧾', undo: '↩️' }[l.type] || '🔢';
+    const icon = { create: '🆕', meta: '✏️', archive: '🗑️', delta: '🔢', set: '✍️', in: '🧾', undo: '↩️', return: '📤' }[l.type] || '🔢';
     const dl = l.delta ? `<span class="dl ${l.delta < 0 ? 'minus' : 'plus'}">${l.delta > 0 ? '+' : ''}${fmt(l.delta)}</span>` : '';
     const what = l.type === 'in' && l.isNewItem ? `명세서 입고 · 새 품목 (${fmt(l.after)})` : l.type === 'create' ? `품목 등록 (${fmt(l.after)})` : l.type === 'meta' ? '품목 정보 수정' : l.type === 'archive' ? '품목 삭제(보관)' : `${fmt(l.before)} → <b>${fmt(l.after)}</b>`;
     out += `<div class="log" style="margin-top:6px"><div class="ic">${icon}</div><div class="tx"><b>${esc(l.itemName)}</b><div style="font-size:.86rem">${what}${l.memo ? ` <span style="color:var(--mid)">· ${esc(l.memo)}</span>` : ''}</div><small>${esc(l.byName)} · ${ago(l.at)}</small></div>${dl}</div>`;
@@ -517,7 +517,7 @@ async function shareInvite(code) {
 }
 
 /* ── 거래명세서 입고 ── */
-const won = (n) => '₩' + fmt(Math.round(n || 0));
+const won = (n) => (n < 0 ? '−₩' + fmt(Math.round(-n)) : '₩' + fmt(Math.round(n || 0)));
 function monthTotal(off = 0) {
   const d = new Date(), y = d.getFullYear(), m = d.getMonth() + off;
   const from = new Date(y, m, 1), to = new Date(y, m + 1, 1);
@@ -526,16 +526,17 @@ function monthTotal(off = 0) {
 function inView() {
   const list = st.invoices;
   return `
-  ${canInvoice() ? `<button class="cta" style="width:100%" id="inCam">📷 명세서 찍기 / 사진 고르기</button><p class="s-sub" style="text-align:center;margin:6px 0 0;font-size:.78rem">아래 가운데 📷 버튼으로 어느 화면에서든 바로 찍을 수 있어요</p>` : ''}
-  <div class="sum" style="margin-top:12px"><div><small>이번 달 매입</small><b>${won(monthTotal())}</b></div><div><small>지난달 매입</small><b>${won(monthTotal(-1))}</b></div><div><small>이번 달 명세서</small><b>${st.invoices.filter((v) => v.status === 'in' && v.at.getMonth() === new Date().getMonth() && v.at.getFullYear() === new Date().getFullYear()).length}건</b></div></div>
+  ${canInvoice() ? `<button class="cta" style="width:100%" id="inCam">📷 명세서 찍기 / 사진 고르기</button><p class="s-sub" style="text-align:center;margin:6px 0 0;font-size:.78rem">아래 가운데 📷 버튼으로 어느 화면에서든 바로 찍을 수 있어요</p><button class="btn" id="retBtn2" style="width:100%;margin-top:10px">↩️ 반품 처리 (재고에서 빼기)</button>` : ''}
+  <div class="sum" style="margin-top:12px"><div><small>이번 달 매입</small><b>${won(monthTotal())}</b></div><div><small>지난달 매입</small><b>${won(monthTotal(-1))}</b></div><div><small>이번 달 명세서</small><b>${st.invoices.filter((v) => v.status === 'in' && v.kind !== 'return' && v.at.getMonth() === new Date().getMonth() && v.at.getFullYear() === new Date().getFullYear()).length}건</b></div></div>
   ${monthBlock()}
-  <p class="sec-t">최근 입고</p>
+  <p class="sec-t">최근 입고 · 반품</p>
   <div class="list inv-list">${list.map((v) => `<button class="item inv ${v.status === 'undone' ? 'undone' : ''}" data-inv="${v.id}">
-    <div class="nm"><b>${esc(canonSup(v.supplier))}${v.status === 'undone' ? '<span class="tag" style="background:#EEF0F2;color:var(--mid)">취소됨</span>' : v.lowCount ? `<span class="tag low">확인 ${v.lowCount}</span>` : ''}</b><small>${esc(v.date || '')} · ${v.lines.length}품목 · ${esc(v.byName || '')}</small></div>
-    <div class="q"><b style="font-size:1.1rem">${won(v.total)}</b></div></button>`).join('') || '<div class="empty">아직 입고한 명세서가 없어요</div>'}</div>`;
+    <div class="nm"><b>${esc(canonSup(v.supplier))}${v.kind === 'return' ? '<span class="tag" style="background:#FDECEC;color:var(--red)">반품</span>' : ''}${v.status === 'undone' ? '<span class="tag" style="background:#EEF0F2;color:var(--mid)">취소됨</span>' : v.lowCount ? `<span class="tag low">확인 ${v.lowCount}</span>` : ''}</b><small>${esc(v.date || '')} · ${v.lines.length}품목 · ${esc(v.byName || '')}</small></div>
+    <div class="q"><b style="font-size:1.1rem;${v.total < 0 ? 'color:var(--red)' : ''}">${v.kind === 'return' && !v.total ? '<span style="font-size:.8rem;color:var(--mid)">금액 미입력</span>' : (v.total < 0 ? '−' + won(-v.total) : won(v.total))}</b></div></button>`).join('') || '<div class="empty">아직 입고한 명세서가 없어요</div>'}</div>`;
 }
 function bindIn() {
   const ic = $('#inCam'); if (ic) ic.onclick = () => $('#camFile').click();
+  ['#retBtn', '#retBtn2'].forEach((k) => { const b = $(k); if (b) b.onclick = () => returnSheet(); });
   document.querySelectorAll('[data-inv]').forEach((b) => (b.onclick = () => invoiceSheet(st.invoices.find((v) => v.id === b.dataset.inv))));
 }
 // 사진을 1600px 이하 JPEG로 줄여서 전송 (빠르고 저렴하게)
@@ -573,6 +574,7 @@ async function runInvoice(file) {
 }
 function invoiceSheet(v, fresh) {
   if (!v) return;
+  if (v.kind === 'return') return returnViewSheet(v, fresh);
   const undone = v.status === 'undone';
   const d = sheet(`
     ${fresh ? '<p style="font-weight:900;color:var(--green);margin-bottom:6px">✓ 입고 완료</p>' : ''}
@@ -696,5 +698,76 @@ function editInvoiceSheet(v) {
     e.target.disabled = true;
     try { await api.editInvoice(hid, v, upd, member.name); d.remove(); toast('명세서를 고쳤어요'); }
     catch (err) { console.error(err); toast(err.message?.includes('permission') ? '권한이 없어요 (보안 규칙 게시 필요)' : (err.message || errMsg(err))); e.target.disabled = false; }
+  };
+}
+
+/* ── 반품: 품목을 골라 재고에서 빼기 (손글씨 인수증은 읽지 않음) ── */
+function returnSheet() {
+  const pick = new Map(); // itemId → qty
+  const today = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+  const d = sheet(`<h3>↩️ 반품 처리</h3><p class="s-sub">반품할 품목을 골라 수량을 넣으면 재고에서 빠지고 이력에 남아요. 업체와 주고받는 인수증은 각자 보관해 주세요.</p>
+    <div class="row" style="margin-top:10px"><div><label class="f" style="margin-top:0">거래처</label><input class="in" id="rS" maxlength="60" list="rSL" placeholder="예: 임강약품"><datalist id="rSL">${st.suppliers.map((x) => `<option value="${esc(x.name)}">`).join('')}</datalist></div>
+      <div style="flex:none;width:150px"><label class="f" style="margin-top:0">반품일</label><input class="in" id="rD" type="date" value="${today}"></div></div>
+    <label class="f">반품할 품목</label>
+    <div id="rPicked" style="display:flex;flex-direction:column;gap:6px"></div>
+    <input class="in" id="rQ" style="margin-top:8px" placeholder="🔍 품목 검색해서 추가">
+    <div id="rList" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;max-height:220px;overflow:auto"></div>
+    ${canPrice() ? '<label class="f">반품 금액 (선택)</label><input class="in" id="rA" type="number" inputmode="numeric" min="0" placeholder="모르면 비워 두고 나중에 입력해도 돼요"><p class="s-sub" style="font-size:.76rem;margin-top:4px">입력한 금액은 이번 달 매입에서 빠져요</p>' : '<p class="perm-note" style="margin-top:12px">🔒 반품 금액은 병원 설정에 따라 원장님·사무장님이 따로 입력해요.</p>'}
+    <input class="in" id="rM" style="margin-top:12px" maxlength="60" placeholder="사유 (선택) 예: 유효기간 임박, 파손">
+    <div class="s-actions"><button class="btn" id="rc">닫기</button><button class="btn blue" id="rs">반품 처리</button></div>`);
+  const drawPicked = () => {
+    $('#rPicked', d).innerHTML = [...pick.entries()].map(([id, n]) => { const it = st.items.find((x) => x.id === id); return `
+      <div class="inv-line"><div style="flex:1;min-width:0"><b>${esc(it.name)}</b><small>${esc(it.spec || '')}${it.spec ? ' · ' : ''}지금 ${fmt(it.qty)}${esc(it.unit || '')}</small></div>
+        <input class="in" type="number" inputmode="numeric" min="1" data-rq="${id}" value="${n}" style="flex:none;width:76px;text-align:center"><span style="flex:none;font-size:.8rem;color:var(--mid)">${esc(it.unit || '')}</span>
+        <button class="s-link" data-rx="${id}" style="flex:none;margin:0;width:auto;color:var(--red)">✕</button></div>`; }).join('') || '<p class="s-sub" style="font-size:.8rem">아래에서 품목을 검색해 눌러 주세요</p>';
+    d.querySelectorAll('[data-rq]').forEach((x) => (x.oninput = () => pick.set(x.dataset.rq, Math.max(1, parseInt(x.value || '1', 10) || 1))));
+    d.querySelectorAll('[data-rx]').forEach((x) => (x.onclick = () => { pick.delete(x.dataset.rx); drawPicked(); drawList(); }));
+  };
+  const drawList = () => {
+    const q = $('#rQ', d).value.trim().toLowerCase();
+    const list = st.items.filter((x) => !pick.has(x.id) && (!q || (x.name + ' ' + (x.spec || '')).toLowerCase().includes(q))).slice(0, 30);
+    $('#rList', d).innerHTML = list.map((x) => `<button class="item" data-ra="${x.id}" style="padding:8px 12px"><div class="nm"><b style="font-size:.92rem">${esc(x.name)}</b><small>${esc(x.spec || '')}</small></div><div class="q"><b style="font-size:.95rem">${fmt(x.qty)}</b><small>${esc(x.unit || '')}</small></div></button>`).join('') || '<p class="s-sub" style="font-size:.8rem">검색 결과가 없어요</p>';
+    d.querySelectorAll('[data-ra]').forEach((x) => (x.onclick = () => { pick.set(x.dataset.ra, 1); $('#rQ', d).value = ''; drawPicked(); drawList(); }));
+  };
+  $('#rQ', d).oninput = drawList;
+  drawPicked(); drawList();
+  $('#rc', d).onclick = () => d.remove();
+  $('#rs', d).onclick = async (e) => {
+    if (!pick.size) return toast('반품할 품목을 골라 주세요');
+    const supplier = $('#rS', d).value.trim();
+    if (!supplier) return toast('거래처를 입력해 주세요');
+    const over = [...pick.entries()].map(([id, n]) => [st.items.find((x) => x.id === id), n]).filter(([it, n]) => n > it.qty);
+    if (over.length && !confirm(`${over.map(([it]) => it.name).join(', ')}: 지금 재고보다 많이 반품해요.\n재고는 0까지만 빠져요. 계속할까요?`)) return;
+    e.target.disabled = true;
+    try {
+      const rec = await api.applyReturn(hid, { supplier: canonSup(supplier), date: $('#rD', d).value, amount: parseInt($('#rA', d)?.value || '0', 10) || 0, memo: $('#rM', d).value.trim(), lines: [...pick.entries()].map(([itemId, qty]) => ({ itemId, qty })) }, member.name);
+      d.remove();
+      if (canPrice()) returnViewSheet(rec, true); else toast(`반품 처리했어요 (${rec.lines.length}품목)`);
+    } catch (err) { console.error(err); toast(err.message?.includes('permission') ? '권한이 없어요' : (err.message || errMsg(err))); e.target.disabled = false; }
+  };
+}
+function returnViewSheet(v, fresh) {
+  const undone = v.status === 'undone';
+  const d = sheet(`
+    ${fresh ? '<p style="font-weight:900;color:var(--green);margin-bottom:6px">✓ 반품 처리 완료</p>' : ''}
+    <h3>${esc(canonSup(v.supplier))} <span class="tag" style="background:#FDECEC;color:var(--red)">반품</span></h3>
+    <p class="s-sub">${esc(v.date || '')} · ${v.lines.length}품목${canPrice() ? ' · 반품 금액 ' + (v.total ? won(-v.total) : '미입력') : ''}${undone ? ' · <b style="color:var(--red)">취소됨</b>' : ''}${v.memo ? ' · ' + esc(v.memo) : ''} · ${esc(v.byName || '')}</p>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${v.lines.map((l) => `
+      <div class="inv-line"><div style="flex:1;min-width:0"><b>${esc(l.itemName)}</b><small>${esc(l.spec || '')}${l.spec ? ' · ' : ''}반품 ${fmt(l.qty)}${esc(l.unit || '')}</small></div>
+        <div style="text-align:right;flex:none"><b class="dl minus">${fmt(l.applied)}</b></div></div>`).join('')}</div>
+    ${isManager() && !undone ? `<label class="f">반품 금액</label><div class="row"><input class="in" id="raAmt" type="number" inputmode="numeric" min="0" value="${v.total ? -v.total : ''}" placeholder="도매상 정산 후 입력"><button class="btn blue" id="raSave" style="flex:none;width:auto;padding:0 16px">저장</button></div>` : ''}
+    <div class="s-actions"><button class="btn" id="vc">닫기</button></div>
+    ${undone || !isManager() ? '' : '<button class="s-link" id="vu" style="color:var(--red)">↩ 이 반품 취소하기 (재고 되돌리기)</button>'}`);
+  $('#vc', d).onclick = () => d.remove();
+  const rs = $('#raSave', d); if (rs) rs.onclick = async () => {
+    const amt = Math.max(0, parseInt($('#raAmt', d).value || '0', 10) || 0);
+    rs.disabled = true;
+    try { await api.editInvoice(hid, v, { supplier: v.supplier, date: v.date, total: -amt, lines: v.lines }, member.name); d.remove(); toast('반품 금액을 저장했어요'); }
+    catch (e) { toast(e.message || errMsg(e)); rs.disabled = false; }
+  };
+  const vu = $('#vu', d); if (vu) vu.onclick = async () => {
+    if (!confirm('이 반품을 취소하고 뺀 수량을 재고에 다시 더할까요?\n(취소 기록도 이력에 남습니다)')) return;
+    vu.disabled = true;
+    try { await api.undoInvoice(hid, v, member.name); d.remove(); toast('반품을 취소했어요'); } catch (e) { toast(e.message || errMsg(e)); vu.disabled = false; }
   };
 }
