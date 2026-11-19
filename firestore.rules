@@ -18,6 +18,8 @@ service cloud.firestore {
     function myRole(h) { return get(memPath(h)).data.role; }
     function isOwner(h) { return isMember(h) && myRole(h) == 'owner'; }
     function isManager(h) { return isMember(h) && myRole(h) in ['owner', 'manager']; }
+    // 직원별 권한: invoice(명세서 입고), price(금액 보기) — 원장이 초대·직원관리에서 설정
+    function myPerm(h, k) { return isManager(h) || (isMember(h) && get(memPath(h)).data.get('perms', {}).get(k, false) == true); }
     function strLen(v, lo, hi) { return v is string && v.size() >= lo && v.size() <= hi; }
 
     // 내 계정 → 소속 병원 연결
@@ -59,6 +61,7 @@ service cloud.firestore {
               && exists(/databases/$(db)/documents/hospitals/$(h)/invites/$(request.resource.data.inviteCode))
               && inv().expiresAt > request.time
               && inv().role == request.resource.data.role
+              && request.resource.data.get('perms', {}) == inv().get('perms', {})
               && request.resource.data.role in ['manager', 'staff'])
           );
         allow update: if
@@ -67,7 +70,7 @@ service cloud.firestore {
             && resource.data.role != 'owner'
             && request.resource.data.role in ['manager', 'staff']
             && request.resource.data.status in ['active', 'left']
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'title', 'status', 'leftAt']))
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'title', 'status', 'leftAt', 'perms']))
           ||
           // 본인: 이름·직책 표시만 수정
           (isMember(h) && uid == request.auth.uid
@@ -106,26 +109,28 @@ service cloud.firestore {
             && getAfter(/databases/$(db)/documents/hospitals/$(h)/logs/$(d().lastLogId)).data.after == d().qty;
         }
         function onlyQty() {
-          return d().diff(resource.data).affectedKeys().hasOnly(['qty', 'updatedAt', 'updatedBy', 'lastLogId']);
+          return d().diff(resource.data).affectedKeys().hasOnly(['qty', 'updatedAt', 'updatedBy', 'lastLogId', 'aliases']);
         }
         allow read: if isMember(h);
-        allow create: if isManager(h) && validItem() && logged();
+        allow create: if myPerm(h, 'invoice') && validItem() && logged();
         allow update: if isMember(h) && validItem() && logged() && (isManager(h) || onlyQty());
         allow delete: if false; // 삭제 대신 archived 표시 (이력 보존)
       }
 
       // 거래명세서 입고 기록 (사진은 저장하지 않음, 인식 결과만)
       match /invoices/{id} {
-        allow read: if isMember(h);
-        allow create: if isManager(h)
+        allow read: if myPerm(h, 'price');
+        allow create: if myPerm(h, 'invoice')
           && request.resource.data.byUid == request.auth.uid
           && request.resource.data.at == request.time
           && request.resource.data.status == 'in';
-        // 되돌리기만 허용
+        // 되돌리기 또는 내용 수정 (사무장·원장)
         allow update: if isManager(h)
           && resource.data.status == 'in'
-          && request.resource.data.status == 'undone'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'undoneAt', 'undoneBy']);
+          && ((request.resource.data.status == 'undone'
+               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'undoneAt', 'undoneBy']))
+            || (request.resource.data.status == 'in'
+               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['supplier', 'date', 'total', 'lines', 'lowCount', 'editedAt', 'editedBy'])));
         allow delete: if false;
       }
 

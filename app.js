@@ -26,6 +26,8 @@ function ago(d) {
 }
 const isLow = (it) => it.qty <= it.minQty;
 const isManager = () => member && (member.role === 'owner' || member.role === 'manager');
+const canInvoice = () => isManager() || !!member?.perms?.invoice;
+const canPrice = () => isManager() || !!member?.perms?.price;
 const errMsg = (e) => (String(e?.code || e?.message || e).includes('permission') ? '권한이 없습니다' : '저장하지 못했어요. 잠시 후 다시 시도해 주세요');
 
 /* ── 초대 링크 파라미터 ?join=병원ID_코드 ── */
@@ -132,7 +134,7 @@ async function joinScreen() {
   $('#jn').onclick = async (e) => {
     const name = $('#myName').value.trim(); if (!name) return toast('이름을 입력해 주세요');
     e.target.disabled = true;
-    try { await api.joinByInvite(joinHid, joinCode, { name, title: $('#myTitle').value.trim(), role: inv.role }); done(); location.reload(); }
+    try { await api.joinByInvite(joinHid, joinCode, { name, title: $('#myTitle').value.trim(), role: inv.role, perms: inv.perms }); done(); location.reload(); }
     catch (err) { console.error(err); toast('합류하지 못했어요. 이미 퇴사 처리된 계정이면 원장님께 문의해 주세요'); e.target.disabled = false; }
   };
 }
@@ -164,7 +166,7 @@ function startApp() {
     if (mine) { member = { ...member, ...mine }; if (mine.status !== 'active') return blockedScreen(); }
     render();
   });
-  if (isManager()) api.watchInvoices(hid, (v) => { st.invoices = v; if (st.tab === 'in') render(); });
+  if (canPrice()) api.watchInvoices(hid, (v) => { st.invoices = v; if (st.tab === 'in') render(); });
   const reRender = (k) => (v) => { st[k] = v; render(); };
   api.watchCol(hid, 'suppliers', reRender('suppliers'));
   api.watchCol(hid, 'requests', reRender('requests'));
@@ -176,15 +178,15 @@ function startApp() {
 function render() {
   if ($('#screen').hidden) return;
   const low = st.items.filter(isLow).length + (isManager() ? openReqs().length : 0);
-  const tabs = [['stock', '📦', '재고'], ['low', '🚨', isManager() ? '발주' : '부족'], ...(isManager() ? [['in', '🧾', '입고']] : []), ['log', '🕘', '이력'], ['staff', member.role === 'owner' ? '👥' : '👤', member.role === 'owner' ? '직원' : '내 정보']];
+  const tabs = [['stock', '📦', '재고'], ['low', '🚨', isManager() ? '발주' : '부족'], ...(canInvoice() ? [['cam', '📷', '명세서']] : []), ...(canPrice() ? [['in', '🧾', '매입']] : []), ['log', '🕘', '이력'], ...(!canPrice() ? [['staff', '👤', '내 정보']] : [])];
   $('#tabsIn').style.gridTemplateColumns = `repeat(${tabs.length},1fr)`;
-  $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
-  $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (b) { st.tab = b.dataset.t; render(); scrollTo(0, 0); } };
+  $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${k === 'cam' ? 'cam' : ''} ${st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
+  $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (!b) return; if (b.dataset.t === 'cam') return $('#camFile').click(); st.tab = b.dataset.t; render(); scrollTo(0, 0); };
 
   const keepFocus = document.activeElement?.id === 'q';
   const top = `<header class="top"><div class="top-in">
     <div class="t-logo"><small>SOBUMO</small>재고<span>한눈에</span></div>
-    <div class="t-me"><b>${esc(hospital?.name)}</b><span class="live"></span>${esc(member.name)} · ${ROLE_SHORT[member.role]}</div>
+    <div class="t-me" id="meBtn" role="button" title="${member.role === 'owner' ? '직원 관리' : '내 정보'}"><b>${esc(hospital?.name)} <span style="font-size:.8rem">${member.role === 'owner' ? '👥' : '⚙️'}</span></b><span class="live"></span>${esc(member.name)} · ${ROLE_SHORT[member.role]}</div>
   </div></header>`;
   const body = { stock: stockView, low: lowView, in: inView, log: logView, staff: member.role === 'owner' ? staffView : meView }[st.tab]();
   $('#screen').innerHTML = top + `<div class="page">${body}</div>` + (st.tab === 'stock' && isManager() ? `<button class="fab" id="add">＋ 품목 추가</button>` : '') + (isDemo ? demoBar() : '');
@@ -352,6 +354,7 @@ function staffView() {
     <p class="d">권한을 고르고 링크를 만들어 단톡방이나 문자로 보내세요. 링크는 <b>7일간</b> 유효하고, 받은 직원은 각자 구글 계정으로 들어옵니다.</p>
     <div class="row"><select class="in" id="invRole"><option value="staff">간호사·직원 권한</option><option value="manager">사무장·행정 권한</option></select></div>
     <input class="in" id="invTitle" style="margin-top:8px" placeholder="직책 (예: 간호사, 사무장)" maxlength="20">
+    <div id="invPerms" style="margin-top:10px">${permBoxes('ip', { invoice: true, price: false })}</div>
     <button class="btn blue wide" id="mkInv">초대 링크 만들기</button>
     ${inv.length ? `<p class="sec-t" style="margin-top:16px">사용 가능한 초대 링크</p>${inv.map((i) => `<div class="step"><div class="num">${i.role === 'manager' ? '사' : '직'}</div><div style="flex:1;font-size:.86rem"><b>${ROLE[i.role]}</b>${i.title ? ` · ${esc(i.title)}` : ''}<br><small style="color:var(--mute)">${i.expiresAt ? `${i.expiresAt.getMonth() + 1}/${i.expiresAt.getDate()}까지` : ''}</small></div><button class="btn" style="min-height:36px;padding:0 12px;font-size:.8rem" data-share="${i.id}">보내기</button><button class="btn red" style="min-height:36px;padding:0 12px;font-size:.8rem" data-del="${i.id}">취소</button></div>`).join('')}` : ''}
   </div>
@@ -388,6 +391,7 @@ function bind() {
   const add = $('#add'); if (add) add.onclick = () => itemSheet();
   bindIn();
   bindOrder();
+  const mb = $('#meBtn'); if (mb) mb.onclick = () => { st.tab = 'staff'; render(); scrollTo(0, 0); };
   const out = $('#out'); if (out) out.onclick = () => api.signOut();
   const ms = $('#meSave'); if (ms) ms.onclick = async () => {
     const name = $('#meName').value.trim(); if (!name) return toast('이름을 입력해 주세요');
@@ -395,7 +399,7 @@ function bind() {
   };
   const mk = $('#mkInv'); if (mk) mk.onclick = async () => {
     mk.disabled = true;
-    try { const code = await api.createInvite(hid, { role: $('#invRole').value, title: $('#invTitle').value.trim(), hospitalName: hospital.name }); shareInvite(code); }
+    try { const role = $('#invRole').value; const code = await api.createInvite(hid, { role, title: $('#invTitle').value.trim(), hospitalName: hospital.name, perms: role === 'manager' ? { invoice: true, price: true } : readPerms('ip') }); shareInvite(code); }
     catch (e) { toast(errMsg(e)); } finally { mk.disabled = false; }
   };
   document.querySelectorAll('[data-share]').forEach((b) => (b.onclick = () => shareInvite(b.dataset.share)));
@@ -492,11 +496,12 @@ function memberSheet(m) {
     <h3>${esc(m.name)}</h3><p class="s-sub">${esc(m.email || '')}</p>
     <label class="f">권한</label><select class="in" id="mR" ${left ? 'disabled' : ''}><option value="staff" ${m.role === 'staff' ? 'selected' : ''}>간호사·직원</option><option value="manager" ${m.role === 'manager' ? 'selected' : ''}>사무장·행정</option></select>
     <label class="f">직책</label><input class="in" id="mT" maxlength="20" value="${esc(m.title || '')}" ${left ? 'disabled' : ''}>
+    ${left ? '' : `<div id="mPerms" style="margin-top:12px">${permBoxes('mp', m.perms || {})}</div>`}
     <div class="s-actions"><button class="btn" id="mc">닫기</button>${left ? '<button class="btn green" id="mBack">다시 재직 처리</button>' : '<button class="btn blue" id="ms">저장</button>'}</div>
     ${left ? '' : '<button class="s-link" id="mL" style="color:var(--red)">퇴사 처리 (즉시 접근 차단 · 기록은 보존)</button>'}`);
   const run = async (f, msg) => { try { await api.updateMember(hid, m.uid, f); d.remove(); toast(msg); } catch (e) { toast(errMsg(e)); } };
   $('#mc', d).onclick = () => d.remove();
-  const ms = $('#ms', d); if (ms) ms.onclick = () => run({ role: $('#mR', d).value, title: $('#mT', d).value.trim() }, '저장했어요');
+  const ms = $('#ms', d); if (ms) ms.onclick = () => { const role = $('#mR', d).value; run({ role, title: $('#mT', d).value.trim(), perms: role === 'manager' ? { invoice: true, price: true } : readPerms('mp', d) }, '저장했어요'); };
   const ml = $('#mL', d); if (ml) ml.onclick = () => { if (confirm(`${m.name}님을 퇴사 처리할까요?\n이 직원은 바로 접근할 수 없게 됩니다.`)) run({ status: 'left' }, '퇴사 처리했어요'); };
   const mb = $('#mBack', d); if (mb) mb.onclick = () => run({ status: 'active' }, '다시 재직 처리했어요');
 }
@@ -519,11 +524,7 @@ function monthTotal(off = 0) {
 function inView() {
   const list = st.invoices;
   return `
-  <div class="card in-hero">
-    <h2>🧾 거래명세서로 입고</h2>
-    <p class="d">명세서를 찍으면 AI가 품목·수량·금액을 읽어 <b>바로 재고에 더합니다.</b> 사진은 저장하지 않아요. 잘못 들어가면 건별로 되돌릴 수 있어요.</p>
-    <label class="cta" style="width:100%;cursor:pointer">📷 명세서 찍기 / 사진 고르기<input type="file" accept="image/*" id="invFile" hidden></label>
-  </div>
+  ${canInvoice() ? `<button class="cta" style="width:100%" id="inCam">📷 명세서 찍기 / 사진 고르기</button><p class="s-sub" style="text-align:center;margin:6px 0 0;font-size:.78rem">아래 가운데 📷 버튼으로 어느 화면에서든 바로 찍을 수 있어요</p>` : ''}
   <div class="sum" style="margin-top:12px"><div><small>이번 달 매입</small><b>${won(monthTotal())}</b></div><div><small>지난달 매입</small><b>${won(monthTotal(-1))}</b></div><div><small>이번 달 명세서</small><b>${st.invoices.filter((v) => v.status === 'in' && v.at.getMonth() === new Date().getMonth() && v.at.getFullYear() === new Date().getFullYear()).length}건</b></div></div>
   ${monthBlock()}
   <p class="sec-t">최근 입고</p>
@@ -532,7 +533,7 @@ function inView() {
     <div class="q"><b style="font-size:1.1rem">${won(v.total)}</b></div></button>`).join('') || '<div class="empty">아직 입고한 명세서가 없어요</div>'}</div>`;
 }
 function bindIn() {
-  const f = $('#invFile'); if (f) f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) runInvoice(file); };
+  const ic = $('#inCam'); if (ic) ic.onclick = () => $('#camFile').click();
   document.querySelectorAll('[data-inv]').forEach((b) => (b.onclick = () => invoiceSheet(st.invoices.find((v) => v.id === b.dataset.inv))));
 }
 // 사진을 1600px 이하 JPEG로 줄여서 전송 (빠르고 저렴하게)
@@ -574,18 +575,20 @@ function invoiceSheet(v, fresh) {
   const d = sheet(`
     ${fresh ? '<p style="font-weight:900;color:var(--green);margin-bottom:6px">✓ 입고 완료</p>' : ''}
     <h3>${esc(canonSup(v.supplier))}${isManager() && v.status !== 'undone' ? ' <button class="s-link" id="vfix" style="display:inline;margin:0 0 0 6px;font-size:.78rem">✏️ 이름 고치기</button>' : ''}</h3>
-    <p class="s-sub">${esc(v.date || '')} · ${v.lines.length}품목 · 합계 ${won(v.total)}${undone ? ' · <b style="color:var(--red)">취소됨</b>' : ''}</p>
-    ${v.lowCount && !undone ? `<p class="notice" style="margin-top:12px">노란 줄 ${v.lowCount}개는 AI가 확신하지 못한 부분이에요. 수량이 맞는지 한 번 봐 주세요. 틀렸으면 재고 탭에서 바로 고치면 됩니다.</p>` : ''}
+    <p class="s-sub">${esc(v.date || '')} · ${v.lines.length}품목${canPrice() ? ' · 합계 ' + won(v.total) : ''}${undone ? ' · <b style="color:var(--red)">취소됨</b>' : ''}${v.editedBy ? ` · ✏️ ${esc(v.editedBy)} 수정` : ''}</p>
+    ${v.lowCount && !undone ? `<p class="notice" style="margin-top:12px">노란 줄 ${v.lowCount}개는 AI가 확신하지 못한 부분이에요. 맞는지 한 번 봐 주세요. 틀렸으면 아래 [✏️ 수정]으로 고치면 재고까지 같이 맞춰져요.</p>` : ''}
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${v.lines.map((l) => `
       <div class="inv-line ${l.confidence === 'low' ? 'low' : ''}">
         <div style="flex:1;min-width:0"><b>${esc(l.itemName || l.name)}</b>${l.isNew ? '<span class="tag" style="background:#E8EEF8;color:var(--blue-d)">새 품목</span>' : ''}
-          <small>명세서: ${esc(l.name)}${l.spec ? ' ' + esc(l.spec) : ''} · ${fmt(l.qty)}${esc(l.unit || '')}${l.unitPrice ? ' × ' + fmt(l.unitPrice) : ''}${l.note ? ' · ⚠ ' + esc(l.note) : ''}</small></div>
-        <div style="text-align:right;flex:none"><b class="dl plus">+${fmt(l.applied)}</b><small>${l.amount ? won(l.amount) : ''}</small></div>
+          <small>명세서: ${esc(l.name)}${l.spec ? ' ' + esc(l.spec) : ''} · ${fmt(l.qty)}${esc(l.unit || '')}${canPrice() && l.unitPrice ? ' × ' + fmt(l.unitPrice) : ''}${l.note ? ' · ⚠ ' + esc(l.note) : ''}</small></div>
+        <div style="text-align:right;flex:none"><b class="dl plus">+${fmt(l.applied)}</b><small>${canPrice() && l.amount ? won(l.amount) : ''}</small></div>
       </div>`).join('')}</div>
-    <div class="s-actions"><button class="btn" id="vc">닫기</button>${undone ? '' : '<button class="btn red" id="vu">↩ 이 명세서 입고 되돌리기</button>'}</div>
+    <div class="s-actions"><button class="btn" id="vc">닫기</button>${undone || !isManager() ? '' : '<button class="btn blue" id="ve">✏️ 수정</button>'}</div>
+    ${undone || !isManager() ? '' : '<button class="s-link" id="vu" style="color:var(--red)">↩ 이 명세서 입고 통째로 되돌리기</button>'}
     <p class="s-sub" style="text-align:center;margin-top:10px;font-size:.74rem">AI 인식 결과의 확인 책임은 사용자에게 있습니다</p>`);
   $('#vc', d).onclick = () => d.remove();
   const vf = $('#vfix', d); if (vf) vf.onclick = () => { d.remove(); fixSupplierSheet(v.supplier); };
+  const ve = $('#ve', d); if (ve) ve.onclick = () => { d.remove(); editInvoiceSheet(v); };
   const vu = $('#vu', d); if (vu) vu.onclick = async () => {
     if (!confirm('이 명세서로 들어간 수량을 모두 빼고 입고를 취소할까요?\n(취소 기록도 이력에 남습니다)')) return;
     vu.disabled = true;
@@ -648,5 +651,46 @@ function fixSupplierSheet(wrong) {
       else await api.addTo(hid, 'suppliers', { name, contact: '', phone: '', memo: '', aliases: add });
       d.remove(); toast(`'${name}'(으)로 고쳤어요`);
     } catch (err) { toast(errMsg(err)); e.target.disabled = false; }
+  };
+}
+
+/* ── 직원별 권한 (초대할 때 / 직원 관리에서) ── */
+function permBoxes(pre, p) {
+  return `<p class="s-sub" style="font-size:.8rem;margin-bottom:4px">간호사·직원 권한일 때만 적용 (사무장은 항상 전부 가능)</p>
+  <label class="perm"><input type="checkbox" id="${pre}Inv" ${p.invoice ? 'checked' : ''}> 📷 거래명세서 찍어서 입고하기</label>
+  <label class="perm"><input type="checkbox" id="${pre}Price" ${p.price ? 'checked' : ''}> 💰 단가·금액·매입 합계 보기</label>`;
+}
+function readPerms(pre, root = document) { return { invoice: !!$(`#${pre}Inv`, root)?.checked, price: !!$(`#${pre}Price`, root)?.checked }; }
+
+/* ── 어느 화면에서든 가운데 📷 버튼으로 명세서 입고 ── */
+(function camInput() {
+  const f = document.createElement('input');
+  f.type = 'file'; f.accept = 'image/*'; f.id = 'camFile'; f.hidden = true;
+  f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) runInvoice(file); };
+  document.body.appendChild(f);
+})();
+
+/* ── 명세서 수정 (사무장·원장) ── */
+function editInvoiceSheet(v) {
+  const d = sheet(`<h3>✏️ 명세서 수정</h3><p class="s-sub">입고 수량을 고치면 차이만큼 재고도 같이 맞춰지고, 이력에 남아요.</p>
+    <div class="row" style="margin-top:10px"><div><label class="f" style="margin-top:0">거래처</label><input class="in" id="eS" maxlength="60" value="${esc(canonSup(v.supplier) === '거래처 미확인' ? '' : canonSup(v.supplier))}"></div>
+      <div style="flex:none;width:150px"><label class="f" style="margin-top:0">거래일자</label><input class="in" id="eD" type="date" value="${esc(v.date || '')}"></div></div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">${v.lines.map((l, i) => `
+      <div class="inv-line" style="flex-wrap:wrap">
+        <div style="flex:1 1 100%"><b>${esc(l.itemName || l.name)}</b><small>명세서: ${esc(l.name)} ${esc(l.spec || '')} · ${fmt(l.qty)}${esc(l.unit || '')}</small></div>
+        <label class="ef">입고 수량<input class="in" type="number" inputmode="numeric" min="0" data-ea="${i}" value="${l.applied || 0}"></label>
+        <label class="ef">단가<input class="in" type="number" inputmode="numeric" min="0" data-eu="${i}" value="${l.unitPrice || 0}"></label>
+        <label class="ef">금액<input class="in" type="number" inputmode="numeric" min="0" data-em="${i}" value="${l.amount || 0}"></label>
+      </div>`).join('')}</div>
+    <label class="f">합계 (부가세 포함)</label><input class="in" id="eT" type="number" inputmode="numeric" min="0" value="${v.total || 0}">
+    <div class="s-actions"><button class="btn" id="ec">닫기</button><button class="btn blue" id="es">저장</button></div>`);
+  $('#ec', d).onclick = () => d.remove();
+  $('#es', d).onclick = async (e) => {
+    const num = (sel) => Math.max(0, parseInt($(sel, d).value || '0', 10) || 0);
+    const lines = v.lines.map((l, i) => ({ ...l, applied: num(`[data-ea="${i}"]`), unitPrice: num(`[data-eu="${i}"]`), amount: num(`[data-em="${i}"]`), confidence: 'high', note: '' }));
+    const upd = { supplier: $('#eS', d).value.trim(), date: $('#eD', d).value, total: num('#eT'), lines };
+    e.target.disabled = true;
+    try { await api.editInvoice(hid, v, upd, member.name); d.remove(); toast('명세서를 고쳤어요'); }
+    catch (err) { console.error(err); toast(err.message?.includes('permission') ? '권한이 없어요 (보안 규칙 게시 필요)' : (err.message || errMsg(err))); e.target.disabled = false; }
   };
 }

@@ -87,9 +87,9 @@ async function firebaseApi() {
       const d = s.data();
       return { ...d, expiresAt: ts(d.expiresAt) };
     },
-    async joinByInvite(hid, code, { name, title, role }) {
+    async joinByInvite(hid, code, { name, title, role, perms }) {
       const b = writeBatch(db);
-      b.set(H(hid, 'members', me.uid), { uid: me.uid, name, title, email: me.email, role, status: 'active', joinedAt: serverTimestamp(), inviteCode: code });
+      b.set(H(hid, 'members', me.uid), { uid: me.uid, name, title, email: me.email, role, ...(perms ? { perms } : {}), status: 'active', joinedAt: serverTimestamp(), inviteCode: code });
       b.set(doc(db, 'users', me.uid), { hospitalId: hid });
       await b.commit();
     },
@@ -142,10 +142,10 @@ async function firebaseApi() {
         tx.update(ref, { ...rest, updatedAt: serverTimestamp(), updatedBy: me.uid, lastLogId: log.id });
       });
     },
-    async createInvite(hid, { role, title, hospitalName }) {
+    async createInvite(hid, { role, title, hospitalName, perms }) {
       const code = randCode();
       const b = writeBatch(db);
-      b.set(H(hid, 'invites', code), { role, title, hospitalName, createdBy: me.uid, createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + INVITE_DAYS * 864e5) });
+      b.set(H(hid, 'invites', code), { role, title, hospitalName, perms: perms || { invoice: false, price: false }, createdBy: me.uid, createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + INVITE_DAYS * 864e5) });
       await b.commit();
       return code;
     },
@@ -208,6 +208,26 @@ async function firebaseApi() {
         tx.update(H(hid, 'invoices', inv.id), { status: 'undone', undoneAt: serverTimestamp(), undoneBy: me.uid });
       });
     },
+    // 명세서 수정: 줄마다 입고 수량 차이를 재고에 반영
+    async editInvoice(hid, inv, upd, myName) {
+      return runTransaction(db, async (tx) => {
+        const s0 = await tx.get(H(hid, 'invoices', inv.id));
+        if (s0.data()?.status !== 'in') throw new Error('취소된 명세서는 고칠 수 없어요');
+        const old = s0.data().lines;
+        const diff = {};
+        upd.lines.forEach((l, i) => { const d = (l.applied || 0) - (old[i]?.applied || 0); if (d && l.itemId) diff[l.itemId] = (diff[l.itemId] || 0) + d; });
+        const snaps = {};
+        for (const id of Object.keys(diff)) snaps[id] = await tx.get(H(hid, 'items', id));
+        for (const [id, d] of Object.entries(diff)) {
+          const s = snaps[id]; if (!s.exists()) continue;
+          const cur = s.data(), before = cur.qty, after = Math.max(0, before + d);
+          const log = doc(C(hid, 'logs'));
+          tx.set(log, { itemId: id, itemName: cur.name, before, after, delta: after - before, type: 'in', memo: (upd.supplier || '') + ' 명세서 수정', invoiceId: inv.id, byUid: me.uid, byName: myName, at: serverTimestamp() });
+          tx.update(H(hid, 'items', id), { qty: after, updatedAt: serverTimestamp(), updatedBy: me.uid, lastLogId: log.id });
+        }
+        tx.update(H(hid, 'invoices', inv.id), { supplier: upd.supplier, date: upd.date, total: upd.total, lines: upd.lines, lowCount: 0, editedAt: serverTimestamp(), editedBy: myName });
+      });
+    },
     watchInvoices(hid, cb) {
       return onSnapshot(query(C(hid, 'invoices'), orderBy('at', 'desc'), limit(200)), (s) =>
         cb(s.docs.map((d) => ({ ...withId(d), at: ts(d.data().at) || new Date() }))), () => cb([]));
@@ -252,7 +272,7 @@ function demoApi() {
     members: [
       { id: 'u-owner', uid: 'u-owner', name: '김원장', title: '원장', role: 'owner', status: 'active', joinedAt: new Date(now - 40 * 864e5) },
       { id: 'u-manager', uid: 'u-manager', name: '박사무장', title: '사무장', role: 'manager', status: 'active', joinedAt: new Date(now - 30 * 864e5) },
-      { id: 'u-staff', uid: 'u-staff', name: '이간호', title: '간호사', role: 'staff', status: 'active', joinedAt: new Date(now - 20 * 864e5) },
+      { id: 'u-staff', uid: 'u-staff', name: '이간호', title: '간호사', role: 'staff', perms: { invoice: true, price: false }, status: 'active', joinedAt: new Date(now - 20 * 864e5) },
       { id: 'u-s2', uid: 'u-s2', name: '최간호', title: '간호조무사', role: 'staff', status: 'active', joinedAt: new Date(now - 10 * 864e5) },
       { id: 'u-s3', uid: 'u-s3', name: '정간호', title: '간호사', role: 'staff', status: 'left', joinedAt: new Date(now - 90 * 864e5) },
     ],
@@ -298,7 +318,7 @@ function demoApi() {
       return { before, after };
     },
     async editItem(hid, id, fields, myName, type = 'meta') { const it = S.items.find((x) => x.id === id); const { _memo, ...rest } = fields; Object.assign(it, rest); addLog(it, it.qty, it.qty, type, myName, _memo); emit('items'); },
-    async createInvite(hid, { role, title }) { const code = randCode(); S.invites.push({ id: code, role, title, expiresAt: new Date(Date.now() + INVITE_DAYS * 864e5) }); emit('invites'); return code; },
+    async createInvite(hid, { role, title, perms }) { const code = randCode(); S.invites.push({ id: code, role, title, perms, expiresAt: new Date(Date.now() + INVITE_DAYS * 864e5) }); emit('invites'); return code; },
     async deleteInvite(hid, code) { S.invites = S.invites.filter((x) => x.id !== code); emit('invites'); },
     watchInvoices: watch('invoices'),
     async readInvoice() {
@@ -317,6 +337,11 @@ function demoApi() {
       for (const g of groupNew(plan.created)) { const it = { id: 'n' + Math.random(), name: g.name, spec: g.spec, unit: g.unit || '개', qty: g.qty, minQty: 0, archived: false }; S.items.push(it); addLog(it, 0, g.qty, 'in', myName, inv.supplier); S.logs[0].isNewItem = true; g.lines.forEach((l) => lines.push({ ...l, itemId: it.id, itemName: g.name, applied: l.baseQty, isNew: true })); }
       const rec = { id, supplier: inv.supplier, date: inv.date, total: inv.total, lines, lowCount: lines.filter((l) => l.confidence === 'low').length, byName: myName, at: new Date(), status: 'in' };
       S.invoices.unshift(rec); emit('items'); emit('invoices'); return rec;
+    },
+    async editInvoice(hid, inv, upd, myName) {
+      const r = S.invoices.find((x) => x.id === inv.id);
+      upd.lines.forEach((l, i) => { const d = (l.applied || 0) - (r.lines[i]?.applied || 0); const it = S.items.find((x) => x.id === l.itemId); if (d && it) { const b = it.qty; it.qty = Math.max(0, b + d); addLog(it, b, it.qty, 'in', myName, upd.supplier + ' 명세서 수정'); } });
+      Object.assign(r, upd, { lowCount: 0, editedBy: myName }); emit('items'); emit('invoices');
     },
     async undoInvoice(hid, inv, myName) {
       const back = {}; inv.lines.forEach((l) => { back[l.itemId] = (back[l.itemId] || 0) + l.applied; });
