@@ -14,7 +14,14 @@ function toast(msg) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t); setTimeout(() => t.remove(), 2400);
 }
+let splashOn = false, splashPending = null;
 function show(id) {
+  if (splashOn && id !== 'landing') {
+    splashPending = id;
+    if (id.includes('tabs')) { $('#tabs').hidden = false; document.body.classList.add('splash-ready'); }
+    else if (id === 'screen') endSplash(); // 병원 만들기·합류 등 탭이 없는 화면은 바로 보여 줌
+    return;
+  }
   ['loading', 'landing', 'screen', 'tabs'].forEach((x) => ($('#' + x).hidden = !id.includes(x)));
 }
 function ago(d) {
@@ -47,6 +54,22 @@ const [joinHid, joinCode] = joinParam ? joinParam.split('_') : [];
   });
 })();
 
+/* ── 간판(첫 화면): 로그인돼 있어도 들어올 때 먼저 보여 주고, 하단 탭을 누르면 바로 그 화면으로 ── */
+function splash(manual) {
+  splashPending = manual ? 'screen tabs' : null; splashOn = true;
+  document.body.classList.add('splash');
+  ['loading', 'landing', 'screen', 'tabs'].forEach((x) => ($('#' + x).hidden = !(x === 'landing' || (x === 'tabs' && manual))));
+  document.body.classList.toggle('splash-ready', !!manual);
+  scrollTo(0, 0);
+  const v = $('#heroV'); try { v.currentTime = 0; v.play(); } catch (e) {}
+}
+function endSplash() {
+  if (!splashOn) return;
+  splashOn = false;
+  document.body.classList.remove('splash', 'splash-ready');
+  show(splashPending || 'loading');
+}
+
 /* ── 시작 ── */
 (async function boot() {
   if (!configured) { show('landing'); $('#cfgInfo').hidden = false; $('#startBtn').disabled = true; return; }
@@ -54,10 +77,12 @@ const [joinHid, joinCode] = joinParam ? joinParam.split('_') : [];
   catch (e) { console.error(e); show('landing'); $('#cfgInfo').hidden = false; $('#cfgInfo').textContent = '연결이 원활하지 않아요. 잠시 후 새로고침해 주세요.'; $('#startBtn').disabled = true; return; }
   $('#startBtn').onclick = async () => { try { await api.signIn(); } catch (e) { toast('로그인에 실패했어요'); } };
   if (joinCode) { $('#joinInfo').hidden = false; $('#joinInfo').textContent = '병원 초대 링크로 들어오셨어요. 구글 계정으로 시작하면 바로 합류합니다.'; $('#startBtn').innerHTML = '🎁 초대받은 병원 합류하기 <span>›</span>'; }
+  let firstAuth = true;
   api.onAuth(async (u) => {
     user = u;
+    const first = firstAuth; firstAuth = false;
     if (!u) { show('landing'); return; }
-    show('loading');
+    if (first && !joinCode) splash(); else show('loading');
     try { await route(); } catch (e) { console.error(e); toast('불러오지 못했어요'); show('landing'); }
   });
 })();
@@ -176,12 +201,12 @@ function startApp() {
 }
 
 function render() {
-  if ($('#screen').hidden) return;
+  if ($('#screen').hidden && !splashOn) return;
   const low = st.items.filter(isLow).length + (isManager() ? openReqs().length : 0);
   const tabs = [['stock', '📦', '재고'], ['low', '🚨', isManager() ? '발주' : '부족'], ...(canInvoice() ? [['cam', '📷', '명세서']] : []), ...(canPrice() ? [['in', '🧾', '매입']] : []), ['log', '🕘', '이력'], ...(!canPrice() ? [['staff', '👤', '내 정보']] : [])];
   $('#tabsIn').style.gridTemplateColumns = `repeat(${tabs.length},1fr)`;
   $('#tabsIn').innerHTML = tabs.map(([k, i, t]) => `<button class="tab ${k === 'cam' ? 'cam' : ''} ${st.tab === k ? 'on' : ''}" data-t="${k}"><i>${i}</i>${t}${k === 'low' && low ? `<span class="cnt">${low}</span>` : ''}</button>`).join('');
-  $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (!b) return; if (b.dataset.t === 'cam') return $('#camFile').click(); st.tab = b.dataset.t; render(); scrollTo(0, 0); };
+  $('#tabsIn').onclick = (e) => { const b = e.target.closest('.tab'); if (!b) return; if (splashOn) endSplash(); if (b.dataset.t === 'cam') return $('#camFile').click(); st.tab = b.dataset.t; render(); scrollTo(0, 0); };
 
   const keepFocus = document.activeElement?.id === 'q';
   const top = `<header class="top"><div class="top-in">
@@ -393,6 +418,7 @@ function bind() {
   const add = $('#add'); if (add) add.onclick = () => itemSheet();
   bindIn();
   bindOrder();
+  const lg = $('.t-logo'); if (lg) lg.onclick = () => splash(true);
   const mb = $('#meBtn'); if (mb) mb.onclick = () => { st.tab = 'staff'; render(); scrollTo(0, 0); };
   const out = $('#out'); if (out) out.onclick = () => api.signOut();
   const ms = $('#meSave'); if (ms) ms.onclick = async () => {
