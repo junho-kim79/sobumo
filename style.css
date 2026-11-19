@@ -22,7 +22,7 @@ button{cursor:pointer}
 .brand .b-sub{font-size:1rem;font-weight:700;color:var(--green-ink);margin-top:6px}
 .brand .b-line{font-size:.84rem;color:var(--mid);margin-top:2px;letter-spacing:.02em}
 .brand .b-by{font-size:.72rem;color:var(--mute);margin-top:4px;font-weight:700;letter-spacing:.06em}
-.hero{width:min(92vw,520px);aspect-ratio:16/9;border-radius:22px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.14);background:#EDE8E0}
+.hero{position:relative;width:min(92vw,520px);aspect-ratio:16/9;border-radius:22px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.14);background:#EDE8E0}
 .hero img,.hero video,.hero svg{width:100%;height:100%;object-fit:cover;display:block}
 .headline{font-size:clamp(1.3rem,4.6vw,1.6rem);font-weight:900;letter-spacing:-.04em;line-height:1.4}
 .headline em{font-style:normal;color:var(--blue)}
@@ -187,3 +187,6 @@ label.f{display:block;font-size:.8rem;font-weight:800;color:var(--mid);margin:12
 .pay-chk{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:.76rem;font-weight:800;color:var(--red);background:var(--red-pale);border-radius:999px;padding:5px 10px}
 .pay-chk.on{color:var(--green-ink);background:var(--green-pale)}
 .pay-chk input{width:15px;height:15px}
+
+.hero-cap{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(31,35,40,.72);color:#fff;font-weight:800;font-size:clamp(.82rem,3.4vw,1rem);letter-spacing:-.02em;padding:6px 14px;border-radius:999px;white-space:nowrap;transition:opacity .35s}
+.hero-cap.now{background:rgba(46,125,79,.88)}

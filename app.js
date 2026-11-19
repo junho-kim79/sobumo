@@ -32,10 +32,24 @@ const errMsg = (e) => (String(e?.code || e?.message || e).includes('permission')
 const joinParam = new URLSearchParams(location.search).get('join');
 const [joinHid, joinCode] = joinParam ? joinParam.split('_') : [];
 
+/* ── 첫 화면 영상 자막: 앞부분(종이) → 뒷부분(폰) ── */
+(function heroCaption() {
+  const v = document.getElementById('heroV'), c = document.getElementById('heroCap');
+  if (!v || !c) return;
+  let cur = 0;
+  v.addEventListener('timeupdate', () => {
+    const n = v.currentTime < 7.6 ? 0 : 1;
+    if (n === cur) return;
+    cur = n; c.style.opacity = 0;
+    setTimeout(() => { c.textContent = n ? '이제는, 다 같이 한눈에' : '예전엔, 종이로 하나하나'; c.classList.toggle('now', !!n); c.style.opacity = 1; }, 300);
+  });
+})();
+
 /* ── 시작 ── */
 (async function boot() {
   if (!configured) { show('landing'); $('#cfgInfo').hidden = false; $('#startBtn').disabled = true; return; }
-  api = await createApi();
+  try { api = await createApi(); }
+  catch (e) { console.error(e); show('landing'); $('#cfgInfo').hidden = false; $('#cfgInfo').textContent = '연결이 원활하지 않아요. 잠시 후 새로고침해 주세요.'; $('#startBtn').disabled = true; return; }
   $('#startBtn').onclick = async () => { try { await api.signIn(); } catch (e) { toast('로그인에 실패했어요'); } };
   if (joinCode) { $('#joinInfo').hidden = false; $('#joinInfo').textContent = '병원 초대 링크로 들어오셨어요. 구글 계정으로 시작하면 바로 합류합니다.'; $('#startBtn').innerHTML = '🎁 초대받은 병원 합류하기 <span>›</span>'; }
   api.onAuth(async (u) => {
