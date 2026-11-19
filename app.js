@@ -304,7 +304,7 @@ function supplierSheet(edit) {
   const d = sheet(`<h3>🏪 도매상 관리</h3>
     <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">${st.suppliers.map((x) => `<div class="inv-line"><div style="flex:1"><b>${esc(x.name)}</b><small>${esc(x.contact || '')} ${esc(x.phone || '')}${x.memo ? ' · ' + esc(x.memo) : ''}</small></div><button class="btn" style="flex:none;min-height:34px;padding:0 12px;font-size:.78rem" data-sedit="${x.id}">수정</button></div>`).join('') || '<p class="s-sub">아직 등록된 도매상이 없어요</p>'}</div>
     <p class="sec-t">${edit ? '도매상 수정' : '도매상 추가'}</p>
-    <input class="in" id="sn" maxlength="60" placeholder="상호 (예: 대구메디칼)" value="${esc(edit?.name || '')}">
+    <input class="in" id="sn" maxlength="60" placeholder="상호 (예: 대구메디컬)" value="${esc(edit?.name || '')}">
     <div class="row" style="margin-top:8px"><input class="in" id="sc" maxlength="20" placeholder="담당자" value="${esc(edit?.contact || '')}"><input class="in" id="sp" maxlength="20" inputmode="tel" placeholder="전화번호" value="${esc(edit?.phone || '')}"></div>
     <input class="in" id="sm" style="margin-top:8px" maxlength="80" placeholder="메모 (예: 오후 3시 전 주문 시 당일 배송)" value="${esc(edit?.memo || '')}">
     <div class="s-actions"><button class="btn" id="sx">닫기</button><button class="btn blue" id="ss">${edit ? '저장' : '추가'}</button></div>`);

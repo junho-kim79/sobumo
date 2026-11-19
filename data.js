@@ -285,7 +285,7 @@ function demoApi() {
     invites: [],
     invoices: [],
     suppliers: [
-      { id: 's1', name: '대구메디칼', phone: '053-000-0000', contact: '김과장', memo: '오후 3시 전 주문 시 당일 배송' },
+      { id: 's1', name: '대구메디컬', phone: '053-000-0000', contact: '김과장', memo: '오후 3시 전 주문 시 당일 배송' },
       { id: 's2', name: '영남의료기', phone: '010-0000-0000', contact: '박대리', memo: '' },
     ],
     requests: [],
