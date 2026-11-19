@@ -38,7 +38,7 @@ const [joinHid, joinCode] = joinParam ? joinParam.split('_') : [];
   if (!v || !c) return;
   let cur = 0;
   v.addEventListener('timeupdate', () => {
-    const n = v.currentTime < 7.6 ? 0 : 1;
+    const n = v.currentTime < 4.9 ? 0 : 1;
     if (n === cur) return;
     cur = n; c.style.opacity = 0;
     setTimeout(() => { c.textContent = n ? '이제는, 다 같이 한눈에' : '예전엔, 종이로 하나하나'; c.classList.toggle('now', !!n); c.style.opacity = 1; }, 300);
