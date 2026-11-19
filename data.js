@@ -151,11 +151,11 @@ async function firebaseApi() {
     },
     deleteInvite: (hid, code) => deleteDoc(H(hid, 'invites', code)),
     // ── 거래명세서 ──
-    async readInvoice(image, items) {
+    async readInvoice(image, items, suppliers = []) {
       const token = await auth.currentUser.getIdToken();
       const r = await fetch('/api/invoice', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ image, items: items.map(({ id, name, spec, unit, packQty, packUnit, aliases }) => ({ id, name, spec, unit, packQty, packUnit, aliases })) }),
+        body: JSON.stringify({ image, suppliers, items: items.map(({ id, name, spec, unit, packQty, packUnit, aliases }) => ({ id, name, spec, unit, packQty, packUnit, aliases })) }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || '인식하지 못했어요');
@@ -303,7 +303,7 @@ function demoApi() {
     watchInvoices: watch('invoices'),
     async readInvoice() {
       await new Promise((r) => setTimeout(r, 1800));
-      return { supplier: '대구메디칼(데모)', date: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), total: 286000, lines: [
+      return { supplier: '대구매디칼', date: new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10), total: 286000, lines: [
         { name: 'BD 주사기 3cc 23G', spec: '100입', qty: 2, unit: '박스', unitPrice: 12000, amount: 24000, matchId: 'i0', baseQty: 200, confidence: 'high', note: '' },
         { name: '라텍스 글러브 M', spec: '100매', qty: 5, unit: 'BOX', unitPrice: 9000, amount: 45000, matchId: 'i5', baseQty: 5, confidence: 'high', note: '' },
         { name: '수액세트 일반형', spec: '', qty: 50, unit: 'EA', unitPrice: 800, amount: 40000, matchId: 'i2', baseQty: 50, confidence: 'high', note: '' },

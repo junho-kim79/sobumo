@@ -528,7 +528,7 @@ function inView() {
   ${monthBlock()}
   <p class="sec-t">최근 입고</p>
   <div class="list inv-list">${list.map((v) => `<button class="item inv ${v.status === 'undone' ? 'undone' : ''}" data-inv="${v.id}">
-    <div class="nm"><b>${esc(v.supplier || '거래처 미확인')}${v.status === 'undone' ? '<span class="tag" style="background:#EEF0F2;color:var(--mid)">취소됨</span>' : v.lowCount ? `<span class="tag low">확인 ${v.lowCount}</span>` : ''}</b><small>${esc(v.date || '')} · ${v.lines.length}품목 · ${esc(v.byName || '')}</small></div>
+    <div class="nm"><b>${esc(canonSup(v.supplier))}${v.status === 'undone' ? '<span class="tag" style="background:#EEF0F2;color:var(--mid)">취소됨</span>' : v.lowCount ? `<span class="tag low">확인 ${v.lowCount}</span>` : ''}</b><small>${esc(v.date || '')} · ${v.lines.length}품목 · ${esc(v.byName || '')}</small></div>
     <div class="q"><b style="font-size:1.1rem">${won(v.total)}</b></div></button>`).join('') || '<div class="empty">아직 입고한 명세서가 없어요</div>'}</div>`;
 }
 function bindIn() {
@@ -555,7 +555,8 @@ async function runInvoice(file) {
   try {
     const img = await shrink(file);
     $('#invStep', d).textContent = '품목·수량·금액 읽는 중… (10~20초)';
-    const parsed = await api.readInvoice(img, st.items);
+    const parsed = await api.readInvoice(img, st.items, st.suppliers.map((x) => ({ name: x.name, aliases: x.aliases || [] })));
+    parsed.supplier = canonSup(parsed.supplier);
     if (!parsed.lines?.length) throw new Error('읽을 수 있는 품목이 없어요. 더 밝고 반듯하게 다시 찍어 주세요');
     $('#invStep', d).textContent = '재고에 반영하는 중…';
     const rec = await api.applyInvoice(hid, parsed, member.name);
@@ -572,7 +573,7 @@ function invoiceSheet(v, fresh) {
   const undone = v.status === 'undone';
   const d = sheet(`
     ${fresh ? '<p style="font-weight:900;color:var(--green);margin-bottom:6px">✓ 입고 완료</p>' : ''}
-    <h3>${esc(v.supplier || '거래처 미확인')}</h3>
+    <h3>${esc(canonSup(v.supplier))}${isManager() && v.status !== 'undone' ? ' <button class="s-link" id="vfix" style="display:inline;margin:0 0 0 6px;font-size:.78rem">✏️ 이름 고치기</button>' : ''}</h3>
     <p class="s-sub">${esc(v.date || '')} · ${v.lines.length}품목 · 합계 ${won(v.total)}${undone ? ' · <b style="color:var(--red)">취소됨</b>' : ''}</p>
     ${v.lowCount && !undone ? `<p class="notice" style="margin-top:12px">노란 줄 ${v.lowCount}개는 AI가 확신하지 못한 부분이에요. 수량이 맞는지 한 번 봐 주세요. 틀렸으면 재고 탭에서 바로 고치면 됩니다.</p>` : ''}
     <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">${v.lines.map((l) => `
@@ -584,6 +585,7 @@ function invoiceSheet(v, fresh) {
     <div class="s-actions"><button class="btn" id="vc">닫기</button>${undone ? '' : '<button class="btn red" id="vu">↩ 이 명세서 입고 되돌리기</button>'}</div>
     <p class="s-sub" style="text-align:center;margin-top:10px;font-size:.74rem">AI 인식 결과의 확인 책임은 사용자에게 있습니다</p>`);
   $('#vc', d).onclick = () => d.remove();
+  const vf = $('#vfix', d); if (vf) vf.onclick = () => { d.remove(); fixSupplierSheet(v.supplier); };
   const vu = $('#vu', d); if (vu) vu.onclick = async () => {
     if (!confirm('이 명세서로 들어간 수량을 모두 빼고 입고를 취소할까요?\n(취소 기록도 이력에 남습니다)')) return;
     vu.disabled = true;
@@ -599,7 +601,7 @@ function monthBlock() {
   const ym = st.month && months.includes(st.month) ? st.month : months[0];
   const rows = {};
   st.invoices.filter((v) => v.status === 'in' && ymOf(v.at) === ym).forEach((v) => {
-    const k = (v.supplier || '거래처 미확인').trim();
+    const k = canonSup(v.supplier);
     (rows[k] ||= { total: 0, n: 0 }); rows[k].total += v.total || 0; rows[k].n++;
   });
   const names = Object.keys(rows).sort((a, b) => rows[b].total - rows[a].total);
@@ -619,3 +621,32 @@ document.addEventListener('change', async (e) => {
   try { await api.setIn(hid, 'payments', payId(c.dataset.ym, c.dataset.pay), { month: c.dataset.ym, supplier: c.dataset.pay, paid: c.checked }); toast(c.checked ? '결제 완료로 표시했어요' : '미결제로 바꿨어요'); }
   catch (err) { toast(errMsg(err)); c.checked = !c.checked; }
 });
+
+/* ── 도매상 이름 보정: AI가 잘못 읽은 이름(aliases)을 등록된 도매상 이름으로 ── */
+function canonSup(name) {
+  const n = (name || '').trim();
+  if (!n) return '거래처 미확인';
+  const norm = (x) => (x || '').replace(/\s|\(주\)|㈜|주식회사/g, '');
+  const hit = st.suppliers.find((x) => norm(x.name) === norm(n) || (x.aliases || []).some((a) => norm(a) === norm(n)));
+  return hit ? hit.name : n;
+}
+function fixSupplierSheet(wrong) {
+  const cur = canonSup(wrong);
+  const d = sheet(`<h3>거래처 이름 고치기</h3><p class="s-sub">AI가 읽은 이름: <b>${esc(wrong || '(없음)')}</b></p>
+    <label class="f">올바른 거래처 이름</label><input class="in" id="fx" maxlength="60" value="${esc(cur === '거래처 미확인' ? '' : cur)}" placeholder="예: (주)무화약품" list="supList">
+    <datalist id="supList">${st.suppliers.map((x) => `<option value="${esc(x.name)}">`).join('')}</datalist>
+    <p class="s-sub" style="margin-top:8px;font-size:.78rem">한 번 고쳐 두면 앞으로 AI가 같은 이름으로 잘못 읽어도 자동으로 바로잡아요. 지난 명세서와 월별 매입에도 바로 반영됩니다.</p>
+    <div class="s-actions"><button class="btn" id="fc">닫기</button><button class="btn blue" id="fs">저장</button></div>`);
+  $('#fc', d).onclick = () => d.remove();
+  $('#fs', d).onclick = async (e) => {
+    const name = $('#fx', d).value.trim(); if (!name) return toast('거래처 이름을 입력해 주세요');
+    e.target.disabled = true;
+    try {
+      const ex = st.suppliers.find((x) => x.name === name);
+      const add = wrong && wrong.trim() !== name ? [wrong.trim()] : [];
+      if (ex) await api.setIn(hid, 'suppliers', ex.id, { name: ex.name, aliases: [...new Set([...(ex.aliases || []), ...add])].slice(-20) });
+      else await api.addTo(hid, 'suppliers', { name, contact: '', phone: '', memo: '', aliases: add });
+      d.remove(); toast(`'${name}'(으)로 고쳤어요`);
+    } catch (err) { toast(errMsg(err)); e.target.disabled = false; }
+  };
+}

@@ -31,6 +31,7 @@ const PROMPT = `너는 한국 병의원의 거래명세서(거래명세표, 납�
 규칙
 - 숫자에는 쉼표·원·₩를 넣지 말고 숫자만 쓴다.
 - 합계, 소계, 부가세, 공급가액 합계, 전잔액, 입금액 같은 줄은 lines에 넣지 않는다.
+- supplier(공급자): 아래 '등록된 도매상' 목록의 name이나 aliases와 같거나 한두 글자만 다르면(예: 무화약품/우화약품) 반드시 그 등록된 name을 그대로 쓴다. 목록에 없을 때만 사진에 적힌 대로 쓴다. 공급자는 보통 명세서의 '공급자' 칸이고, '공급받는자'(병원)와 헷갈리지 않는다.
 - 같은 물건인지 판단할 때 브랜드·용량(cc, ml)·굵기(G)·사이즈(S/M/L)·매수가 모두 맞아야 같은 물건이다. 하나라도 다르면 다른 물건이다.
 - 재고 목록의 aliases는 예전 명세서에 적혀 있던 이름이다. 품명이 aliases와 같으면 그 품목이다.
 - baseQty: 짝지은 품목에 packQty가 있고 명세서 단위가 그 품목의 packUnit(박스 등)이면 qty × packQty. 단위가 같으면 qty 그대로. 짝이 없으면 qty 그대로.
@@ -53,7 +54,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: '로그인이 필요합니다' });
   }
 
-  const { image, items } = req.body || {};
+  const { image, items, suppliers } = req.body || {};
+  const supList = (Array.isArray(suppliers) ? suppliers : []).slice(0, 100).map((x) => ({ name: String(x.name || ''), aliases: Array.isArray(x.aliases) ? x.aliases.slice(0, 10).map(String) : [] }));
   if (typeof image !== 'string' || !image.startsWith('data:image/') || image.length > 6_000_000) {
     return res.status(400).json({ error: '사진이 올바르지 않아요' });
   }
@@ -74,7 +76,7 @@ export default async function handler(req, res) {
         messages: [
           { role: 'system', content: PROMPT },
           { role: 'user', content: [
-            { type: 'text', text: `우리 병원 재고 목록(JSON):\n${JSON.stringify(catalog)}` },
+            { type: 'text', text: `등록된 도매상(JSON):\n${JSON.stringify(supList)}\n\n우리 병원 재고 목록(JSON):\n${JSON.stringify(catalog)}` },
             { type: 'image_url', image_url: { url: image } },
           ] },
         ],
